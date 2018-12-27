@@ -8,6 +8,7 @@ import cx_Oracle
 from openpyxl.workbook import Workbook
 from utl.common import *
 
+
 #计算本日自主清算金额
 def calcStlmInnerAmt(db, stlm_date):
     sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where host_date = '%s' and txn_num ='1011' and check_sta ='1'" % stlm_date
