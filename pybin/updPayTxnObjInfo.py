@@ -40,5 +40,7 @@ def main():
     cursor.close()
     db.close()
 
+    print('hostDate %s update paytxn objinfo end' % stlm_date)
+
 if __name__ == '__main__':
     main()
