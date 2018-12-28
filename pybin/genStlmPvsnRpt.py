@@ -74,17 +74,17 @@ class stlmPvsnAcctInfo:
         cursor.execute(sql)
         x = cursor.fetchone()
         if x is not None:
-            self.mchtStlmAmt = x[0]
-            self.companyIncome = x[1]
-            self.insProfits = x[2]
-            self.chnlAmt = x[3]
-            self.diffAmt = x[4]
-            self.mchtDeposit = x[5]
-            self.lockAmt = x[6]
-            self.bankDeposit = x[7]
-            self.riskLoan = x[8]
-            self.othLoan = x[9]
-            self.payChnlLoan = x[10]
+            self.mchtStlmAmt = toNumberFmt(x[0])
+            self.companyIncome = toNumberFmt(x[1])
+            self.insProfits = toNumberFmt(x[2])
+            self.chnlAmt = toNumberFmt(x[3])
+            self.diffAmt = toNumberFmt(x[4])
+            self.mchtDeposit = toNumberFmt(x[5])
+            self.lockAmt = toNumberFmt(x[6])
+            self.bankDeposit = toNumberFmt(x[7])
+            self.riskLoan = toNumberFmt(x[8])
+            self.othLoan = toNumberFmt(x[9])
+            self.payChnlLoan = toNumberFmt(x[10])
 
 #交易相关数值统计
 class TxnInfo:
@@ -94,11 +94,14 @@ class TxnInfo:
         self.mchtStlmAmt = 0
         self.companyIncome = 0
         self.insIncome = 0
-
+        self.diffChnlAmt = 0
+        self.riskLoan = 0
 
         self.__get_mcht_stlm()
         self.__get_company_income()
         self.__get_ins_income()
+        self.__get_diff_chnl_amt()
+        self.__get_risk_loan()
 
     #当日清算金额
     def __get_mcht_stlm(self):
@@ -108,7 +111,7 @@ class TxnInfo:
         cursor.execute(sql)
         x = cursor.fetchone()
         if x[0] is not None:
-            self.mchtStlmAmt = x[0]
+            self.mchtStlmAmt = toNumberFmt(x[0])
         cursor.close()
 
     #公司未划收入(公司收入)
@@ -119,7 +122,7 @@ class TxnInfo:
         cursor.execute(sql)
         x = cursor.fetchone()
         if x[0] is not None:
-            self.companyIncome = x[0]
+            self.companyIncome = toNumberFmt(x[0])
         cursor.close()
 
     #机构合作商收入
@@ -130,13 +133,76 @@ class TxnInfo:
         cursor.execute(sql)
         x = cursor.fetchone()
         if x[0] is not None:
-            self.insIncome = x[0]
+            self.insIncome = toNumberFmt(x[0])
         cursor.close()
 
     #已入未登账(本日沉淀 - 上日沉淀 + 长款)
+    def __get_diff_chnl_amt(self):
+        sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where host_date ='%s' and " \
+              "stlm_date = '%s' and check_sta ='1' and txn_num ='1011'" \
+              % (self.stlmDate, getLastDay(self.stlmDate))
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            lastAmt = toNumberFmt(x[0])
+        else:
+            lastAmt = 0
+        sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where host_date ='%s' and " \
+              "stlm_date = '%s' and check_sta ='1' and txn_num ='1011'" \
+              % (getNextDay(self.stlmDate), self.stlmDate)
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            currAmt = toNumberFmt(x[0])
+        else:
+            currAmt = 0
+
+        sql = "select sum(CHNL_TXN_AMT) from tbl_err_chk_txn_dtl where " \
+              "host_date = '%s' and CHK_STA ='1' and group_id ='A001'" % self.stlmDate
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            longAmt = toNumberFmt(x[0])
+        else:
+            longAmt = 0
+        self.diffChnlAmt = longAmt + currAmt - lastAmt
+        cursor.close()
+
+    #风险垫资
+    def __get_risk_loan(self):
+        #暂时不知道具体数据,暂时为空
+        self.riskLoan = 0
 
 
+class lockInfo:
+    def __init__(self, db, stlmDate):
+        self.db = db
+        self.stlmDate = stlmDate
+        self.lockAmt = 0
+        self.unlockAmt = 0
 
+        self.__get_lock_amt()
+
+    def __get_lock_amt(self):
+        sql = "select sum(LOCK_AT)/100 from T_TXN_LOCK where" \
+              "host_date ='%s' and TXN_TYPE ='01' " % self.stlmDate
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.lockAmt = toNumberFmt(x[0])
+        cursor.close()
+
+    def __get_unlock_amt(self):
+        sql = "select sum(free_at)/100 from T_TXN_LOCK where" \
+              "host_date ='%s' and TXN_TYPE ='02' " % self.stlmDate
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.unlockAmt = toNumberFmt(x[0])
+        cursor.close()
 
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),
