@@ -168,9 +168,17 @@ class AgentBalance:
         cursor = self.dbacc.cursor()
         cursor.execute(sql)
         x = cursor.fetchone()
-        cursor.close()
         if x is not None:
             self.agentIncome = toNumberFmt(x[0])
+        sql = "select sum(TXN_AT/100) from t_txn_dtl " \
+              "where ACCEPT_DT ='%s' and acct_id ='%s' " \
+              "and ACCT_TYPE ='00000002' and INT_TXN_CD='01003'" % \
+              (self.stlmDate, self.agentAcctId)
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.agentIncome = self.agentIncome - toNumberFmt(x[0])
+        cursor.close()
 
     def __get_agent_pay(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
