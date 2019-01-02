@@ -342,7 +342,7 @@ class chnlAmtInfo:
 
     #交易类文件
     def __get_intxn_amt(self):
-        sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where chnl_id ='A001' and " \
+        sql = "select sum(REAL_TRANS_AMT - iss_fee - swt_fee - prod_fee) from tbl_stlm_txn_bill_dtl where chnl_id ='A001' and " \
               "stlm_date ='%s'" % self.stlmDate
         cursor = self.db.cursor()
         cursor.execute(sql)
