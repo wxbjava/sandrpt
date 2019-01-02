@@ -82,7 +82,7 @@ class rptFile():
     def recordInAmt(self, initAcct, chnlAmt):
         self.ws.cell(row=self.iCurr, column=2).value = 'Èë½ð'
         initAcct.chnlAmt = toNumberFmt(initAcct.chnlAmt + chnlAmt)
-        self.ws.cell(row=self.iCurr, column=6).value = initAcct.chnlAmt
+        self.ws.cell(row=self.iCurr, column=6).value = chnlAmt
         initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit - chnlAmt)
         self.ws.cell(row=self.iCurr, column=10).value = toNumberFmt(0 - chnlAmt)
         self.iCurr = self.iCurr + 1
