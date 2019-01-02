@@ -107,10 +107,16 @@ def main():
 
     print('hostDate %s expRptSandCost begin' % stlm_date)
     filePath = '%s/%s/' % (os.environ['RPT7HOME'], stlm_date)
-    sql = "select trim(INS_ID_CD),HOST_DATE,MCHT_CD,STLM_MD,ITERM_ID," \
-          "MCHT_TYPE,CARD_TYPE,TXN_SUM,TXN_AMT,MCHT_FEE,ISS_FEE,SWT_FEE,PROD_FEE," \
-          "ALL_COST_FEE,ERR_FEE,ACC_IN_AMT,MCHT_STLM_AMT,ACQ_AMT,HEAD_AMT,BRA_AMT,AGENT_AMT " \
-          "from TBL_SAND_COST_FILE_DTL where host_date ='%s' order by INS_ID_CD" % stlm_date
+    if (len(stlm_date) == 8) :
+        sql = "select trim(INS_ID_CD),HOST_DATE,MCHT_CD,STLM_MD,ITERM_ID, " \
+              "MCHT_TYPE,CARD_TYPE,TXN_SUM,TXN_AMT,MCHT_FEE,ISS_FEE,SWT_FEE,PROD_FEE," \
+              "ALL_COST_FEE,ERR_FEE,ACC_IN_AMT,MCHT_STLM_AMT,ACQ_AMT,HEAD_AMT,BRA_AMT,AGENT_AMT " \
+              "from TBL_SAND_COST_FILE_DTL where host_date ='%s' order by INS_ID_CD" % stlm_date
+    else:
+        sql = "select trim(INS_ID_CD),HOST_DATE,MCHT_CD,STLM_MD,ITERM_ID, " \
+              "MCHT_TYPE,CARD_TYPE,TXN_SUM,TXN_AMT,MCHT_FEE,ISS_FEE,SWT_FEE,PROD_FEE," \
+              "ALL_COST_FEE,ERR_FEE,ACC_IN_AMT,MCHT_STLM_AMT,ACQ_AMT,HEAD_AMT,BRA_AMT,AGENT_AMT " \
+              "from TBL_SAND_COST_FILE_DTL where host_date like '%s%%' order by INS_ID_CD, host_date" % stlm_date
     print(sql)
     cursor = db.cursor()
     cursor.execute(sql)
