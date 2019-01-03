@@ -235,7 +235,7 @@ class AgentBalance:
         self.__get_company_income()
         self.__get_company_pay()
 
-def genRptFunc(stlmDate, ws, mchtBal, agentBal):
+def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     i = 1
     ws.cell(row=i, column=8).value = '间联系统余额报表'
     i = i + 1
@@ -286,6 +286,22 @@ def genRptFunc(stlmDate, ws, mchtBal, agentBal):
     ws.cell(row=i, column=20).value = agentBal.companyPay
     ws.cell(row=i, column=21).value = agentBal.companyFinalAmt
 
+    #插入数据库
+    sql = "insert into TBL_RPT_INS_BALANCE_INF values (" \
+          "'%s', '%s', %f, %d, %f, %f, %f, %f," \
+          "%f, %d, %f, %d, %f, %f, %f, %f, %f," \
+          "%f, %f, %f, %f, %f)" % (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,
+                                            mchtBal.txnAmt, mchtBal.txnCost, mchtBal.errAmt, mchtBal.mchtFee,
+                                            mchtBal.mchtStlmAmt, mchtBal.payTxnCount, mchtBal.payTxnAmt,
+                                            mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.finalAmt,
+                                            agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay, agentBal.agentFinalAmt,
+                                            agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
+                                            agentBal.companyFinalAmt)
+
+    cursor = db.cursor()
+    cursor.execute(sql)
+    cursor.close()
+
 def main():
     # 数据库连接配置
     dbbat = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),encoding='gb18030')
@@ -321,10 +337,11 @@ def main():
             filename = filePath + 'AcqBalanceInf_%s_%s.xlsx' % (insIdCd,stlm_date)
             wb = Workbook()
             ws = wb.active
-            genRptFunc(stlm_date, ws, mchtBal, agentBal)
+            genRptFunc(stlm_date, dbbat, ws, mchtBal, agentBal)
             wb.save(filename)
             wb.close()
     cursor.close()
+    dbbat.commit()
 
 
 
