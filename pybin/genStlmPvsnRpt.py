@@ -30,7 +30,6 @@ class rptFile():
 
     def recordInitAmt(self, initAcct):
         self.ws.cell(row=self.iCurr, column=1).value = '期初'
-        self.ws.cell(row=self.iCurr, column=2).value = '场景'
         self.ws.cell(row=self.iCurr, column=3).value = initAcct.mchtStlmAmt
         self.ws.cell(row=self.iCurr, column=4).value = initAcct.companyIncome
         self.ws.cell(row=self.iCurr, column=5).value = initAcct.insProfits
@@ -46,6 +45,7 @@ class rptFile():
     #当日交易
     def recordTodayTxn(self, initAcct, mchtStlmAmt, companyIncome,
                        insProfits, chnlAmt, diffAmt, riskLoan):
+        self.ws.cell(row=self.iCurr, column=1).value = initAcct.stlmDate
         self.ws.cell(row=self.iCurr, column=2).value = '当天交易'
         initAcct.mchtStlmAmt = toNumberFmt(initAcct.mchtStlmAmt + mchtStlmAmt)
         self.ws.cell(row=self.iCurr, column=3).value = mchtStlmAmt
