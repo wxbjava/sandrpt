@@ -24,6 +24,7 @@ class MchtBalance:
         self.payTxnAmt = 0.0     #代付金额
         self.payUnknownCount = 0.0   #未知代付笔数
         self.payUnknownAmt = 0.0  #未知代付金额
+        self.payPayTxnRtn = 0.0   #代付退回金额
 
     def __get_balance_amt(self, db, stlmDate):
         sql = "select sum(MCHT_A_PREV_BAL_AT + MCHT_B_PREV_BAL_AT - MCHT_C_PREV_BAL_AT) " \
@@ -76,7 +77,19 @@ class MchtBalance:
         if x is not None:
             self.payUnknownCount = toNumberFmt(x[0])
             self.payUnknownAmt = toNumberFmt(x[1])
+
+        #查找非当日代付退回记录
+        sql = "select sum(a.TXN_AT, a.TXN_FEE_AT) from " \
+              "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
+              "left join (select * from t_txn_log where TXN_NUM='801011') b " \
+              "on a.txn_key = b.txn_key where a.host_date != b.host_date and REQ_BRH_ID = '%s' " % (stlmDate, self.insIdCd)
+        print(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.payPayTxnRtn = toNumberFmt(x[0])
         cursor.close()
+
+
 
     def getAcctInfo(self, db, stlmDate):
         self.__get_balance_amt(db, stlmDate)
@@ -227,6 +240,7 @@ class AgentBalance:
             self.companyPay = toNumberFmt(x[0])
 
 
+
     def getAcctInfo(self):
         self.__get_agent_balance_amt()
         self.__get_agent_income()
@@ -252,15 +266,16 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=10).value = '代付金额'
     ws.cell(row=i, column=11).value = '代付未知笔数'
     ws.cell(row=i, column=12).value = '代付未知金额'
-    ws.cell(row=i, column=13).value = '商户期末余额'
-    ws.cell(row=i, column=14).value = '机构合作商期初余额'
-    ws.cell(row=i, column=15).value = '机构合作商收入'
-    ws.cell(row=i, column=16).value = '机构合作商划款'
-    ws.cell(row=i, column=17).value = '机构合作商期末余额'
-    ws.cell(row=i, column=18).value = '杉德收入期初余额'
-    ws.cell(row=i, column=19).value = '杉德收入'
-    ws.cell(row=i, column=20).value = '杉德收入划款'
-    ws.cell(row=i, column=21).value = '杉德收入未结余额'
+    ws.cell(row=i, column=13).value = '未知代付退回金额'
+    ws.cell(row=i, column=14).value = '商户期末余额'
+    ws.cell(row=i, column=15).value = '机构合作商期初余额'
+    ws.cell(row=i, column=16).value = '机构合作商收入'
+    ws.cell(row=i, column=17).value = '机构合作商划款'
+    ws.cell(row=i, column=18).value = '机构合作商期末余额'
+    ws.cell(row=i, column=19).value = '杉德收入期初余额'
+    ws.cell(row=i, column=20).value = '杉德收入'
+    ws.cell(row=i, column=21).value = '杉德收入划款'
+    ws.cell(row=i, column=22).value = '杉德收入未结余额'
 
     #值
     i = i + 1
@@ -276,24 +291,25 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=10).value = mchtBal.payTxnAmt
     ws.cell(row=i, column=11).value = mchtBal.payUnknownCount
     ws.cell(row=i, column=12).value = mchtBal.payUnknownAmt
-    ws.cell(row=i, column=13).value = mchtBal.finalAmt
-    ws.cell(row=i, column=14).value = agentBal.agentInitAmt
-    ws.cell(row=i, column=15).value = agentBal.agentIncome
-    ws.cell(row=i, column=16).value = agentBal.agentPay
-    ws.cell(row=i, column=17).value = agentBal.agentFinalAmt
-    ws.cell(row=i, column=18).value = agentBal.companyInitAmt
-    ws.cell(row=i, column=19).value = agentBal.companyIncome
-    ws.cell(row=i, column=20).value = agentBal.companyPay
-    ws.cell(row=i, column=21).value = agentBal.companyFinalAmt
+    ws.cell(row=i, column=13).value = mchtBal.payPayTxnRtn
+    ws.cell(row=i, column=14).value = mchtBal.finalAmt
+    ws.cell(row=i, column=15).value = agentBal.agentInitAmt
+    ws.cell(row=i, column=16).value = agentBal.agentIncome
+    ws.cell(row=i, column=17).value = agentBal.agentPay
+    ws.cell(row=i, column=18).value = agentBal.agentFinalAmt
+    ws.cell(row=i, column=19).value = agentBal.companyInitAmt
+    ws.cell(row=i, column=20).value = agentBal.companyIncome
+    ws.cell(row=i, column=21).value = agentBal.companyPay
+    ws.cell(row=i, column=22).value = agentBal.companyFinalAmt
 
     #插入数据库
     sql = "insert into TBL_RPT_INS_BALANCE_INF values (" \
           "'%s', '%s', %f, %d, %f, %f, %f, %f," \
-          "%f, %d, %f, %d, %f, %f, %f, %f, %f," \
+          "%f, %d, %f, %d, %f, %f, %f, %f, %f, %f," \
           "%f, %f, %f, %f, %f)" % (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,
                                             mchtBal.txnAmt, mchtBal.txnCost, mchtBal.errAmt, mchtBal.mchtFee,
                                             mchtBal.mchtStlmAmt, mchtBal.payTxnCount, mchtBal.payTxnAmt,
-                                            mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.finalAmt,
+                                            mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.payPayTxnRtn, mchtBal.finalAmt,
                                             agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay, agentBal.agentFinalAmt,
                                             agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
                                             agentBal.companyFinalAmt)
