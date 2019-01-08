@@ -16,10 +16,13 @@ def updDestId(db, keyRsp):
     if x is not None:
         sql = "update tbl_acq_txn_log set obj_ins_id_cd = '%s',OBJ_MCHT_CD='%s',OBJ_TERM_CD='%s' where " \
               "key_rsp = '%s'" % (x[0],x[1],x[2],keyRsp)
-        upd = db.cursor()
-        upd.execute(sql)
-        db.commit()
-        upd.close()
+    else:
+        sql = "update tbl_acq_txn_log set obj_ins_id_cd = '0000' where " \
+              "key_rsp = '%s'" % keyRsp
+    upd = db.cursor()
+    upd.execute(sql)
+    db.commit()
+    upd.close()
     cursor.close()
 
 
