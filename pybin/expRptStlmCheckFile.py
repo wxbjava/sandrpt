@@ -277,7 +277,10 @@ def tailTxn03RptBody(ws,i,stlm_date,chnlId,count,transAmt):
     ws.cell(row=i, column=2).value = getChnlName(chnlId)
     ws.cell(row=i, column=3).value = count
     ws.cell(row=i, column=4).value = toNumberFmt(transAmt * (-1))
-    ws.cell(row=i, column=5).value = '商户清算款'
+    if chnlId.rstrip() == '00000901':
+        ws.cell(row=i, column=5).value = '代理商分润'
+    else:
+        ws.cell(row=i, column=5).value = '商户清算款'
 
 def handleTxn03RptBody(db, ws, stlm_date):
     # 按照通道查找对账成功的代付

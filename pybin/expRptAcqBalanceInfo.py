@@ -61,7 +61,17 @@ class MchtBalance:
             elif ltTxn[1] == '1801':
                 # 代付
                 self.payTxnCount = ltTxn[0]
-                self.payTxnAmt = toNumberFmt(fabs(ltTxn[2]))
+                self.payTxnAmt = fabs(ltTxn[2])
+
+        #计算代理商分润
+        sql = "select count(*), nvl(sum(trans_amt/100),0) from tbl_acq_txn_log where host_date ='%s' and " \
+              "txn_num ='1801' and substrb(ADDTNL_DATA,1,2) ='04' and " \
+              "trans_state ='1' and company_cd ='%s'" % (stlmDate, self.insIdCd)
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        self.payTxnCount = self.payTxnCount - x[0]
+        self.payTxnAmt = toNumberFmt(self.payTxnAmt - x[1])
+
         cursor.close()
         self.mchtStlmAmt = toNumberFmt(self.txnAmt - self.errAmt - self.mchtFee)
 

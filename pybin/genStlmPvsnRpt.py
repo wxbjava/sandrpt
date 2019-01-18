@@ -99,8 +99,8 @@ class rptFile():
     #代理商收入出
     def recordInsIncomePayOut(self, initAcct, outAmt):
         self.ws.cell(row=self.iCurr, column=2).value = '代理商收入出'
-        initAcct.companyIncome = toNumberFmt(initAcct.companyIncome - outAmt)
-        self.ws.cell(row=self.iCurr, column=4).value = toNumberFmt(0 - outAmt)
+        initAcct.insProfits = toNumberFmt(initAcct.insProfits - outAmt)
+        self.ws.cell(row=self.iCurr, column=5).value = toNumberFmt(0 - outAmt)
         initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + outAmt)
         self.ws.cell(row=self.iCurr, column=13).value = outAmt
         self.iCurr = self.iCurr + 1
