@@ -116,10 +116,12 @@ class AgentBalance:
         self.agentFinalAmt = 0.0
         self.agentPay = 0.0
         self.agentIncome = 0.0
+        self.agentDelayIncome = 0.0
         self.companyInitAmt = 0.0
         self.companyFinalAmt = 0.0
         self.companyIncome = 0.0
         self.companyPay = 0.0
+        self.companyDelayIncome = 0.0
         self.agentAcctId = self.__get_agent_acct_id()
         self.companyAcctId = self.__get_company_acct_id()
 
@@ -203,6 +205,16 @@ class AgentBalance:
             self.agentIncome = self.agentIncome - toNumberFmt(x[0])
         cursor.close()
 
+        #计算交易日对应收入
+        sql = "select sum(ALL_PROFITS) from tbl_ins_profits_txn_sum where " \
+              "host_date = '%s' and INS_ID_CD ='%s'" % (self.stlmDate, self.insIdCd)
+        cursor = self.dbbat.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.agentDelayIncome = toNumberFmt(x[0])
+        cursor.close()
+
     def __get_agent_pay(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
               "where ACCEPT_DT ='%s' and acct_id ='%s' " \
@@ -236,6 +248,16 @@ class AgentBalance:
         cursor.close()
         if x is not None:
             self.companyIncome = toNumberFmt(x[0])
+
+        # 计算交易日对应收入
+        sql = "select sum(ALL_PROFITS) from TBL_SAND_ACQ_PROFITS where " \
+                "host_date = '%s' and INS_ID_CD ='%s'" % (self.stlmDate, self.insIdCd)
+        cursor = self.dbbat.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.companyDelayIncome = toNumberFmt(x[0])
+        cursor.close()
 
     def __get_company_pay(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
@@ -281,11 +303,13 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=15).value = '机构合作商期初余额'
     ws.cell(row=i, column=16).value = '机构合作商收入'
     ws.cell(row=i, column=17).value = '机构合作商划款'
-    ws.cell(row=i, column=18).value = '机构合作商期末余额'
-    ws.cell(row=i, column=19).value = '杉德收入期初余额'
-    ws.cell(row=i, column=20).value = '杉德收入'
-    ws.cell(row=i, column=21).value = '杉德收入划款'
-    ws.cell(row=i, column=22).value = '杉德收入未结余额'
+    ws.cell(row=i, column=18).value = '机构合作商待入账收入'
+    ws.cell(row=i, column=19).value = '机构合作商期末余额'
+    ws.cell(row=i, column=20).value = '杉德收入期初余额'
+    ws.cell(row=i, column=21).value = '杉德收入'
+    ws.cell(row=i, column=22).value = '杉德收入划款'
+    ws.cell(row=i, column=23).value = '杉德待入账收入'
+    ws.cell(row=i, column=24).value = '杉德收入未结余额'
 
     #值
     i = i + 1
@@ -306,23 +330,26 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=15).value = agentBal.agentInitAmt
     ws.cell(row=i, column=16).value = agentBal.agentIncome
     ws.cell(row=i, column=17).value = agentBal.agentPay
-    ws.cell(row=i, column=18).value = agentBal.agentFinalAmt
-    ws.cell(row=i, column=19).value = agentBal.companyInitAmt
-    ws.cell(row=i, column=20).value = agentBal.companyIncome
-    ws.cell(row=i, column=21).value = agentBal.companyPay
-    ws.cell(row=i, column=22).value = agentBal.companyFinalAmt
+    ws.cell(row=i, column=18).value = agentBal.agentDelayIncome
+    ws.cell(row=i, column=19).value = agentBal.agentFinalAmt
+    ws.cell(row=i, column=20).value = agentBal.companyInitAmt
+    ws.cell(row=i, column=21).value = agentBal.companyIncome
+    ws.cell(row=i, column=22).value = agentBal.companyPay
+    ws.cell(row=i, column=23).value = agentBal.companyDelayIncome
+    ws.cell(row=i, column=24).value = agentBal.companyFinalAmt
 
     #插入数据库
     sql = "insert into TBL_RPT_INS_BALANCE_INF values (" \
           "'%s', '%s', %f, %d, %f, %f, %f, %f," \
-          "%f, %d, %f, %d, %f, %f, %f, %f, %f, %f," \
-          "%f, %f, %f, %f, %f)" % (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,
+          "%f, %d, %f, %d, %f, %f, 0, %f, %f, %f, %f," \
+          "%f, %f, %f, %f, %f, %f, %f)" % (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,
                                             mchtBal.txnAmt, mchtBal.txnCost, mchtBal.errAmt, mchtBal.mchtFee,
                                             mchtBal.mchtStlmAmt, mchtBal.payTxnCount, mchtBal.payTxnAmt,
                                             mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.payPayTxnRtn, mchtBal.finalAmt,
-                                            agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay, agentBal.agentFinalAmt,
+                                            agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay, agentBal.agentDelayIncome,
+                                           agentBal.agentFinalAmt,
                                             agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
-                                            agentBal.companyFinalAmt)
+                                            agentBal.companyDelayIncome, agentBal.companyFinalAmt)
 
     cursor = db.cursor()
     cursor.execute(sql)

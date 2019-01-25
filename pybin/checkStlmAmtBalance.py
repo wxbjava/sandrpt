@@ -11,7 +11,8 @@ from utl.common import *
 
 #计算本日自主清算金额
 def calcStlmInnerAmt(db, stlm_date):
-    sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where host_date = '%s' and txn_num ='1011' and check_sta ='1'" % stlm_date
+    sql = "select sum(trans_amt)/100 from tbl_acq_txn_log where host_date = '%s' and txn_num ='1011' " \
+          "and trans_state ='1' and REVSAL_FLAG ='0' and CANCEL_FLAG ='0'" % stlm_date
     cursor = db.cursor()
     cursor.execute(sql)
     x = cursor.fetchone()
