@@ -96,6 +96,15 @@ class rptFile():
         self.ws.cell(row=self.iCurr, column=13).value = outMchtPayAmt
         self.iCurr = self.iCurr + 1
 
+    #收入出
+    def recordCompanyIncomePayOut(self, initAcct, outAmt):
+        self.ws.cell(row=self.iCurr, column=2).value = '收入出'
+        initAcct.companyIncome = toNumberFmt(initAcct.companyIncome - outAmt)
+        self.ws.cell(row=self.iCurr, column=4).value = toNumberFmt(0 - outAmt)
+        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit + outAmt)
+        self.ws.cell(row=self.iCurr, column=10).value = outAmt
+        self.iCurr = self.iCurr + 1
+
     #代理商收入出
     def recordInsIncomePayOut(self, initAcct, outAmt):
         self.ws.cell(row=self.iCurr, column=2).value = '代理商收入出'
@@ -199,6 +208,7 @@ class txnInfo:
         self.riskLoan = 0
         self.mchtPayAmt = 0
         self.agentPayAmt = 0
+        self.companyIncomeOff = 0
 
         self.__get_mcht_stlm()
         self.__get_company_income()
@@ -220,7 +230,7 @@ class txnInfo:
             self.mchtStlmAmt = toNumberFmt(x[0])
         cursor.close()
 
-    #公司未划收入(公司收入)
+    #公司未划收入(公司收入),公司收入核销
     def __get_company_income(self):
         sql = "select sum(ALL_PROFITS) from TBL_SAND_ACQ_PROFITS where " \
               "host_date ='%s'" % self.stlmDate
@@ -229,6 +239,12 @@ class txnInfo:
         x = cursor.fetchone()
         if x[0] is not None:
             self.companyIncome = toNumberFmt(x[0])
+        sql = "select sum(PROFITS_AMT) from TBL_SAND_PROFITS_CHARGE_OFFS where CHARGE_DATE = '%s'" % self.stlmDate
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.companyIncomeOff = toNumberFmt(x[0])
         cursor.close()
 
     #机构合作商收入
@@ -365,6 +381,7 @@ class chnlAmtInfo:
 
 
 
+
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),
                            encoding='gb18030')
@@ -406,7 +423,8 @@ def main():
     rptxls.recordInAmt(stlmPvsnAcct, chnlFile.intxnAmt)
     #商户清算款出金
     rptxls.recordMchtStlmAmtOut(stlmPvsnAcct, txnInf.mchtPayAmt)
-    #收入出(暂无)
+    #收入出
+    rptxls.recordCompanyIncomePayOut(stlmPvsnAcct, txnInf.companyIncomeOff)
 
     #代理商收入出
     rptxls.recordInsIncomePayOut(stlmPvsnAcct, txnInf.agentPayAmt)

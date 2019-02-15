@@ -34,6 +34,8 @@ def getMchtType(mchtType):
         return "标准"
     elif mchtType == '2':
         return "优惠"
+    elif mchtType == '5':
+        return "云闪付"
     else:
         return "其他"
 
