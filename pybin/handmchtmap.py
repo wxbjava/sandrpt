@@ -9,7 +9,7 @@ bin_id = '9892'
 db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSERSWT'], os.environ['DBPWDSWT'], os.environ['TNSNAME']),
                            encoding='gb18030')
 
-filename = "data.sql"
+filename = "data20190215.sql"
 fin = open(filename, "wb")
 
 def getMccInfo(mcc_cd):
@@ -25,29 +25,29 @@ def getMccInfo(mcc_cd):
         return '*','*','*'
 
 def genSql(mcc_cd, obj_mcht_cd, obj_term_id, mcht_name, area_cd):
-    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
-          "(5, '%s', '*', '* ', '*', '*', '*', '*', '*', '%s', '*  ', '*', '*', '*', '*', '*', '*', '09970000', '*          ', '%s', '%s', '%s', '%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '%s');\n" % (bin_id, mcc_cd, obj_mcht_cd, obj_term_id,mcc_cd, mcht_name, area_cd)
+    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_MCHT_NAME_OTH, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
+          "(5, '%s', '*', '* ', '*', '*', '*', '*', '*', '%s', '*  ', '*', '*', '*', '*', '*', '*', '09970000', '*          ', '%s', '%s', '%s', '%s','%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '%s');\n" % (bin_id, mcc_cd, obj_mcht_cd, obj_term_id,mcc_cd, mcht_name, mcht_name, area_cd)
     fin.write(sql.encode('gb18030'))
 
     high_amt, start_time, end_time = getMccInfo(mcc_cd)
-    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
-          "(10, '%s', '*', '* ', '*', '*', '*   ', '*', '*', '*', '*  ', '*', '%s', '*       ', '%s', '*       ', '%s', '* ', '*', '%s', '%s', '%s', '%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '%s');\n" % \
-          (bin_id, high_amt, start_time, end_time, obj_mcht_cd, obj_term_id,mcc_cd, mcht_name, area_cd)
+    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_MCHT_NAME_OTH, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
+          "(10, '%s', '*', '* ', '*', '*', '*   ', '*', '*', '*', '*  ', '*', '%s', '*       ', '%s', '*       ', '%s', '* ', '*', '%s', '%s', '%s', '%s','%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '%s');\n" % \
+          (bin_id, high_amt, start_time, end_time, obj_mcht_cd, obj_term_id,mcc_cd, mcht_name, mcht_name, area_cd)
     fin.write(sql.encode('gb18030'))
 
-    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
-          "(20, '%s', '*', '* ', '*', '*', '*   ', '*', '*', '*', '*  ', '*', '%s', '*       ', '%s', '*       ', '%s', '* ', '*', '%s', '%s', '%s', '%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '%s');\n" % \
-          (bin_id, high_amt, start_time, end_time, obj_mcht_cd, obj_term_id, mcc_cd, mcht_name, area_cd[0:2])
+    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_MCHT_NAME_OTH, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
+          "(20, '%s', '*', '* ', '*', '*', '*   ', '*', '*', '*', '*  ', '*', '%s', '*       ', '%s', '*       ', '%s', '* ', '*', '%s', '%s', '%s', '%s','%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '%s');\n" % \
+          (bin_id, high_amt, start_time, end_time, obj_mcht_cd, obj_term_id, mcc_cd, mcht_name, mcht_name,area_cd[0:2])
     fin.write(sql.encode('gb18030'))
 
-    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
-          "(30, '%s', '*', '* ', '*', '*', '*   ', '*', '*', '*', '*  ', '*', '%s', '*       ', '%s', '*       ', '%s', '* ', '*', '%s', '%s', '%s', '%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '*');\n" % \
-          (bin_id, high_amt, start_time, end_time, obj_mcht_cd, obj_term_id, mcc_cd, mcht_name)
+    sql = "INSERT INTO TBL_SHC_MCHT_TERM_MAP (MAP_IDX, BIN_ID, BANK_ID, CARD_TP, CARD_BIN, MCC_TP, MCHT_GP, SRC_MCHT_CD, SRC_TERM_ID, SRC_MCHT_TP, SRC_SPEC_FEE_CD, LOW_AMT, HIGH_AMT, START_DATE, START_TIME, END_DATE, END_TIME, ACQ_INS_ID_CD, FWD_INS_ID_CD, OBJ_MCHT_CD, OBJ_TERM_ID, OBJ_MCHT_TP, OBJ_MCHT_NAME,OBJ_MCHT_NAME_OTH, OBJ_ACQ_INS_ID_CD, OBJ_SPEC_FEE_CD, REC_OPR_ID, REC_UPD_OPR, REC_CRT_TS, REC_UPD_TS, AREA_CD) VALUES " \
+          "(30, '%s', '*', '* ', '*', '*', '*   ', '*', '*', '*', '*  ', '*', '%s', '*       ', '%s', '*       ', '%s', '* ', '*', '%s', '%s', '%s', '%s','%s', '08180000   ', '*  ', '*', '*         ', sysdate, sysdate, '*');\n" % \
+          (bin_id, high_amt, start_time, end_time, obj_mcht_cd, obj_term_id, mcc_cd, mcht_name, mcht_name)
     fin.write(sql.encode('gb18030'))
 
 
 def main():
-    fileName = "C:/Users/Think/Desktop/第二批标扣.xls"
+    fileName = "E:/需求/杉德系统数据变更/商户池/20190215/第三批标扣简化.xls"
     workbook = xlrd.open_workbook(fileName)
     sh = workbook.sheet_by_index(0)
     nrows = sh.nrows

@@ -75,7 +75,7 @@ class MchtBalance:
         cursor.close()
         self.mchtStlmAmt = toNumberFmt(self.txnAmt - self.errAmt - self.mchtFee)
 
-    def __get_oth_txn(self, db, stlmDate):
+    def __get_oth_txn(self, db, dbacc, stlmDate):
         sql = "select count(*), sum(a.txn_amt) from tbl_err_chk_txn_dtl a " \
               "left join tbl_mcht_inf b on a.CARD_ACCP_ID = b.mcht_cd " \
               "where a.host_date ='%s' and a.chk_sta='4' and company_cd = '%s' " \
@@ -87,13 +87,16 @@ class MchtBalance:
         if x is not None:
             self.payUnknownCount = toNumberFmt(x[0])
             self.payUnknownAmt = toNumberFmt(x[1])
+        cursor.close()
 
         #查找非当日代付退回记录
-        sql = "select sum(a.TXN_AT, a.TXN_FEE_AT) from " \
+        sql = "select sum(a.TXN_AT - a.TXN_FEE_AT) from " \
               "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
               "left join (select * from t_txn_log where TXN_NUM='801011') b " \
-              "on a.txn_key = b.txn_key where a.host_date != b.host_date and REQ_BRH_ID = '%s' " % (stlmDate, self.insIdCd)
+              "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' " % (stlmDate, self.insIdCd)
         print(sql)
+        cursor = dbacc.cursor()
+        cursor.execute(sql)
         x = cursor.fetchone()
         if x is not None:
             self.payPayTxnRtn = toNumberFmt(x[0])
@@ -101,10 +104,10 @@ class MchtBalance:
 
 
 
-    def getAcctInfo(self, db, stlmDate):
+    def getAcctInfo(self, db, dbacc, stlmDate):
         self.__get_balance_amt(db, stlmDate)
         self.__get_succ_txn(db, stlmDate)
-        self.__get_oth_txn(db, stlmDate)
+        self.__get_oth_txn(db, dbacc, stlmDate)
 
 class AgentBalance:
     def __init__(self, insIdCd, dbbat, dbacc, stlmDate):
@@ -384,7 +387,7 @@ def main():
             #查看信息
             insIdCd = ltData[0]
             mchtBal = MchtBalance(insIdCd)
-            mchtBal.getAcctInfo(dbbat, stlm_date)
+            mchtBal.getAcctInfo(dbbat, dbacc, stlm_date)
             agentBal = AgentBalance(insIdCd, dbbat, dbacc, stlm_date)
             agentBal.getAcctInfo()
             filename = filePath + 'AcqBalanceInf_%s_%s.xlsx' % (insIdCd,stlm_date)
