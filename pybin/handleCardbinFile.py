@@ -112,10 +112,11 @@ def main():
         insIdCd = getInsIdCd(sh.cell(i, 0).value)
         cardDis = sh.cell(i, 1).value
         acct1_tnum = getFirstLine(sh.cell(i, 4).value)
-        acc1_offset = getFirstLine(sh.cell(i, 5).value)
+        #acc1_offset = getFirstLine(sh.cell(i, 5).value)
         acc1_len = getFirstLine(sh.cell(i, 8).value)
         bin_tnum = getFirstLine(sh.cell(i, 10).value)
         bin_offset = getFirstLine(sh.cell(i, 11).value)
+        acc1_offset = bin_offset
         bin_len = getFirstLine(sh.cell(i, 12).value)
         bin_sta_no = getFirstLine(sh.cell(i, 13).value)
         bin_end_no = bin_sta_no
