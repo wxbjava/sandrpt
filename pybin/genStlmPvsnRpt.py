@@ -185,9 +185,9 @@ class rptFile():
     def recordInsIncomePayOut(self, initAcct, outAmt):
         self.ws.cell(row=self.iCurr, column=2).value = '代理商收入出'
         initAcct.insProfits = toNumberFmt(initAcct.insProfits - outAmt)
-        self.ws.cell(row=self.iCurr, column=5).value = toNumberFmt(0 - outAmt)
+        self.ws.cell(row=self.iCurr, column=7).value = toNumberFmt(0 - outAmt)
         initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + outAmt)
-        self.ws.cell(row=self.iCurr, column=13).value = outAmt
+        self.ws.cell(row=self.iCurr, column=9).value = outAmt
         self.iCurr = self.iCurr + 1
 
     #客结退汇-对公代付的代付退单
@@ -202,10 +202,10 @@ class rptFile():
     #资金渠道扣代付
     def recordChnlPayAmt(self, initAcct, chnlPayAmt):
         self.ws.cell(row=self.iCurr, column=2).value = '资金渠道扣代付'
-        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit + chnlPayAmt)
-        self.ws.cell(row=self.iCurr, column=9).value = chnlPayAmt
-        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan - chnlPayAmt)
-        self.ws.cell(row=self.iCurr, column=10).value = toNumberFmt(0 - chnlPayAmt)
+        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit - chnlPayAmt)
+        self.ws.cell(row=self.iCurr, column=9).value = toNumberFmt(0 - chnlPayAmt)
+        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + chnlPayAmt)
+        self.ws.cell(row=self.iCurr, column=10).value = chnlPayAmt
         self.iCurr = self.iCurr + 1
 
     def recordFinalAmt(self, initAcct):
