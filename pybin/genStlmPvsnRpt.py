@@ -202,9 +202,9 @@ class rptFile():
     #资金渠道扣代付
     def recordChnlPayAmt(self, initAcct, chnlPayAmt):
         self.ws.cell(row=self.iCurr, column=2).value = '资金渠道扣代付'
-        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit - chnlPayAmt)
+        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan - chnlPayAmt)
         self.ws.cell(row=self.iCurr, column=9).value = toNumberFmt(0 - chnlPayAmt)
-        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + chnlPayAmt)
+        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit + chnlPayAmt)
         self.ws.cell(row=self.iCurr, column=10).value = chnlPayAmt
         self.iCurr = self.iCurr + 1
 

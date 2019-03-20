@@ -272,26 +272,34 @@ def tailTxn02RptTail(ws,i,count,transAmt,prodAmt,costAmt):
     ws.cell(row=i, column=7).value = toNumberFmt((transAmt - prodAmt - costAmt) * (-1))
 
 #出款
-def tailTxn03RptBody(ws,i,stlm_date,chnlId,count,transAmt):
+def tailTxn03RptBody(ws,i,stlm_date,chnlId, type,count,transAmt):
+    typeName = ''
     ws.cell(row=i, column=1).value = stlm_date
-    ws.cell(row=i, column=2).value = getChnlName(chnlId)
-    ws.cell(row=i, column=3).value = count
-    ws.cell(row=i, column=4).value = toNumberFmt(transAmt * (-1))
-    if chnlId.rstrip() == '00000901':
-        ws.cell(row=i, column=5).value = '代理商分润'
+    ws.cell(row=i, column=2).value = "%s-%s" % (chnlId, getChnlName(chnlId))
+    if type == "00":
+        typeName = "S0"
+    elif type == "01" :
+        typeName = "T1"
     else:
-        ws.cell(row=i, column=5).value = '商户清算款'
+        typeName = "其他"
+    ws.cell(row=i, column=3).value = typeName
+    ws.cell(row=i, column=4).value = count
+    ws.cell(row=i, column=5).value = toNumberFmt(transAmt * (-1))
+    if chnlId.rstrip() == '00000901':
+        ws.cell(row=i, column=6).value = '代理商分润'
+    else:
+        ws.cell(row=i, column=6).value = '商户清算款'
 
 def handleTxn03RptBody(db, ws, stlm_date):
     # 按照通道查找对账成功的代付
     global i
-    sql = "select DEST_CHNL_ID, count(*), sum(REAL_TRANS_AMT) " \
+    sql = "select DEST_CHNL_ID, pay_type, count(*), sum(REAL_TRANS_AMT) " \
           " from TBL_STLM_TXN_BILL_DTL " \
-          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' group by DEST_CHNL_ID" % (stlm_date)
+          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' group by DEST_CHNL_ID, pay_type" % (stlm_date)
     cursor = db.cursor()
     cursor.execute(sql)
     for ltTxn in cursor:
-        tailTxn03RptBody(ws, i, stlm_date, ltTxn[0], ltTxn[1], toNumberFmt(ltTxn[2]))
+        tailTxn03RptBody(ws, i, stlm_date, ltTxn[0], ltTxn[1], ltTxn[2], toNumberFmt(ltTxn[3]))
         i = i + 1
 
     cursor.close()
@@ -304,9 +312,10 @@ def handleTxn03Rpt(db, ws, stlm_date):
     i = i + 1
     ws.cell(row=i, column=1).value = '出款日期'
     ws.cell(row=i, column=2).value = '通道'
-    ws.cell(row=i, column=3).value = '出款笔数'
-    ws.cell(row=i, column=4).value = '出款金额'
-    ws.cell(row=i, column=5).value = '出款类型'
+    ws.cell(row=i, column=3).value = 'S0T1类别'
+    ws.cell(row=i, column=4).value = '出款笔数'
+    ws.cell(row=i, column=5).value = '出款金额'
+    ws.cell(row=i, column=6).value = '出款类型'
     i = i + 1
 
     handleTxn03RptBody(db, ws, stlm_date)
