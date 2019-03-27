@@ -7,6 +7,7 @@ import sys
 import cx_Oracle
 from openpyxl.workbook import Workbook
 from utl.common import *
+from utl.gldict import *
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
 
@@ -67,12 +68,14 @@ class rptFile():
         self.iCurr = self.iCurr + 1
 
     # 出金
-    def recordMchtStlmAmtOutS0(self, initAcct, outMchtPayAmt):
+    def recordMchtStlmAmtOutS0(self, initAcct, outMchtPayAmt, othLoan, sandLoan):
         self.ws.cell(row=self.iCurr, column=2).value = '出金'
         initAcct.mchtStlmAmt = toNumberFmt(initAcct.mchtStlmAmt - outMchtPayAmt)
         self.ws.cell(row=self.iCurr, column=3).value = toNumberFmt(0 - outMchtPayAmt)
-        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + outMchtPayAmt)
-        self.ws.cell(row=self.iCurr, column=9).value = outMchtPayAmt
+        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + othLoan)
+        self.ws.cell(row=self.iCurr, column=9).value = othLoan
+        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit + sandLoan)
+        self.ws.cell(row=self.iCurr, column=10).value = sandLoan
         self.iCurr = self.iCurr + 1
 
     #发卡退单,传入值为负
@@ -163,12 +166,14 @@ class rptFile():
         self.iCurr = self.iCurr + 1
 
     #商户清算款出金,T1出款金额
-    def recordMchtStlmAmtOutT1(self, initAcct, outMchtPayAmt):
+    def recordMchtStlmAmtOutT1(self, initAcct, outMchtPayAmt, othLoan, sandLoan):
         self.ws.cell(row=self.iCurr, column=2).value = '商户清算款出金'
         initAcct.mchtStlmAmt = toNumberFmt(initAcct.mchtStlmAmt - outMchtPayAmt)
         self.ws.cell(row=self.iCurr, column=3).value = toNumberFmt(0 - outMchtPayAmt)
-        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + outMchtPayAmt)
-        self.ws.cell(row=self.iCurr, column=9).value = outMchtPayAmt
+        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + othLoan)
+        self.ws.cell(row=self.iCurr, column=9).value = othLoan
+        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit + sandLoan)
+        self.ws.cell(row=self.iCurr, column=10).value = sandLoan
         self.iCurr = self.iCurr + 1
 
 
@@ -182,12 +187,12 @@ class rptFile():
         self.iCurr = self.iCurr + 1
 
     #代理商收入出
-    def recordInsIncomePayOut(self, initAcct, outAmt):
+    def recordInsIncomePayOut(self, initAcct, outAmt, sandLoan):
         self.ws.cell(row=self.iCurr, column=2).value = '代理商收入出'
         initAcct.insProfits = toNumberFmt(initAcct.insProfits - outAmt)
         self.ws.cell(row=self.iCurr, column=7).value = toNumberFmt(0 - outAmt)
-        initAcct.payChnlLoan = toNumberFmt(initAcct.payChnlLoan + outAmt)
-        self.ws.cell(row=self.iCurr, column=9).value = outAmt
+        initAcct.bankDeposit = toNumberFmt(initAcct.bankDeposit + sandLoan)
+        self.ws.cell(row=self.iCurr, column=10).value = sandLoan
         self.iCurr = self.iCurr + 1
 
     #客结退汇-对公代付的代付退单
@@ -483,25 +488,18 @@ class chnlAmtInfo:
     def __init__(self, db, stlmDate):
         self.db = db
         self.stlmDate = stlmDate
-        self.intxnAmt = 0
-        self.outtxnAmt = 0
 
         self.__get_intxn_amt()
-        self.__get_outtxn_amt()
 
     #交易类文件,交易需要节假日汇总
     def __get_intxn_amt(self):
-        cursor = self.db.cursor()
+        self.intxnAmt = 0
         #检查节假日
-        sql = "select * from TBL_HOLI_INF where START_DATE <='%s' and END_DATE >'%s'" % (self.stlmDate, self.stlmDate)
-        cursor.execute(sql)
-        x = cursor.fetchone()
-        if x is not None:
-            cursor.close()
-            self.intxnAmt = 0
+        if isHoliDay(self.db, self.stlmDate):
             return
 
         #节假日结束
+        cursor = self.db.cursor()
         start_date = getLastDay(self.stlmDate)
         end_date = start_date
         sql = "select START_DATE,END_DATE from TBL_HOLI_INF where END_DATE ='%s'" % self.stlmDate
@@ -518,18 +516,66 @@ class chnlAmtInfo:
             self.intxnAmt = toNumberFmt(x[0])
         cursor.close()
 
+class chnlPayAmtInfo:
+    def __init__(self, db, stlmDate):
+        self.db = db
+        self.stlmDate = stlmDate
+        self.__get_chnl_loan_amt()
+        self.__get_pay_txn_amt()
 
-    #代付文件
-    def __get_outtxn_amt(self):
-        sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where chnl_id ='A002' and " \
-              "stlm_date ='%s'" % self.stlmDate
+    #代付对账文件渠道扣款(节假日记收)
+    def __get_chnl_loan_amt(self):
+        self.othAllLoan = 0.0
+        if isHoliDay(self.db, self.stlmDate):
+            return
+
+        #非节假日获取前一日,或节假日区间的垫资费用
         cursor = self.db.cursor()
+        start_date = getLastDay(self.stlmDate)
+        end_date = start_date
+        sql = "select START_DATE,END_DATE from TBL_HOLI_INF where END_DATE ='%s'" % self.stlmDate
         cursor.execute(sql)
         x = cursor.fetchone()
-        if x[0] is not None:
-            self.outtxnAmt = toNumberFmt(0 - x[0])
-        cursor.close()
+        if x is not None:
+            start_date = getLastDay(x[0])
 
+        sql = "select nvl(sum(REAL_TRANS_AMT),0), DEST_CHNL_ID from TBL_STLM_TXN_BILL_DTL where stlm_date >='%s' " \
+              " and stlm_date <='%s' group by DEST_CHNL_ID" % (start_date, end_date)
+        cursor.execute(sql)
+        for ltData in cursor:
+            #通道垫资
+            if getFundType(ltData[1]) == 0:
+                self.othAllLoan = toNumberFmt(self.othAllLoan - ltData[0])
+
+
+    #对账后交易分类
+    def __get_pay_txn_amt(self):
+        self.sandLoanT1 = 0.0
+        self.sandLoanS0 = 0.0
+        self.othLoanT1 = 0.0
+        self.othLoanS0 = 0.0
+        self.agentIncomePay = 0.0
+        sql = "select nvl(sum(REAL_TRANS_AMT),0), DEST_CHNL_ID, pay_type from TBL_STLM_TXN_BILL_DTL where stlm_date ='%s' " \
+              " group by DEST_CHNL_ID,pay_type" % self.stlmDate
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        for ltData in cursor:
+            #获取机构垫资类型
+            if getFundType(ltData[1]) == 1:
+                #杉德垫资
+                if str(ltData[1]).rstrip() == '00000910':
+                    self.agentIncomePay = toNumberFmt(self.agentIncomePay - ltData[0])
+                elif ltData[2] == '00':
+                    self.sandLoanS0 = toNumberFmt(self.sandLoanS0 - ltData[0])
+                else:
+                    self.sandLoanT0 = toNumberFmt(self.sandLoanT0 - ltData[0])
+            elif getFundType(ltData[1]) == 0:
+                if ltData[2] == '00':
+                    self.othLoanS0 = toNumberFmt(self.othLoanS0 - ltData[0])
+                else:
+                    self.othLoanT1 = toNumberFmt(self.othLoanT1 - ltData[0])
+
+        cursor.close()
 
 
 
@@ -570,9 +616,10 @@ def main():
 
     #交易 - 异常核销，识别商户
     rptxls.recordAbnormalWriteOff()
+    chnlPayAmt = chnlPayAmtInfo(db, stlm_date)
 
     #出金
-    rptxls.recordMchtStlmAmtOutS0(stlmPvsnAcct, txnInf.mchtPayAmtS0)
+    rptxls.recordMchtStlmAmtOutS0(stlmPvsnAcct, txnInf.mchtPayAmtS0, chnlPayAmt.othLoanS0, chnlPayAmt.sandLoanS0)
 
     # 发卡退单,传入值为负
     rptxls.recordChargeBack(stlmPvsnAcct, 0)
@@ -611,13 +658,13 @@ def main():
     chnlFile = chnlAmtInfo(db, stlm_date)
     rptxls.recordInAmt(stlmPvsnAcct, chnlFile.intxnAmt)
     #商户清算款出金,T1出款金额
-    rptxls.recordMchtStlmAmtOutT1(stlmPvsnAcct, txnInf.mchtPayAmtT1)
+    rptxls.recordMchtStlmAmtOutT1(stlmPvsnAcct, txnInf.mchtPayAmtT1, chnlPayAmt.othLoanT1, chnlPayAmt.sandLoanT1)
 
     #我司收入出
     rptxls.recordCompanyIncomePayOut(stlmPvsnAcct, txnInf.companyIncomeOff)
 
     #代理商收入出
-    rptxls.recordInsIncomePayOut(stlmPvsnAcct, txnInf.agentPayAmt)
+    rptxls.recordInsIncomePayOut(stlmPvsnAcct, txnInf.agentPayAmt, chnlPayAmt.agentIncomePay)
 
     #客结退汇-对公代付的代付退单
     rptxls.recordPayReturnPublic()
@@ -626,7 +673,7 @@ def main():
     rptxls.recordPayReturnPrivate()
 
     #资金渠道扣代付
-    rptxls.recordChnlPayAmt(stlmPvsnAcct, chnlFile.outtxnAmt)
+    rptxls.recordChnlPayAmt(stlmPvsnAcct, chnlPayAmt.othAllLoan)
 
     #期末
     rptxls.recordFinalAmt(stlmPvsnAcct)

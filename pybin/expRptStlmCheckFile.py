@@ -285,7 +285,7 @@ def tailTxn03RptBody(ws,i,stlm_date,chnlId, type,count,transAmt):
     ws.cell(row=i, column=3).value = typeName
     ws.cell(row=i, column=4).value = count
     ws.cell(row=i, column=5).value = toNumberFmt(transAmt * (-1))
-    if chnlId.rstrip() == '00000901':
+    if chnlId.rstrip() == '00000910':
         ws.cell(row=i, column=6).value = '代理商分润'
     else:
         ws.cell(row=i, column=6).value = '商户清算款'
