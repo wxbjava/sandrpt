@@ -117,6 +117,7 @@ def getItemName(itemId):
 chnlDict = {
     '00000160' : '上海直联通道',
     '00000440' : '交行银企通道',
+    '00000653' : '上海T1代付通道',
     '00000730' : '平安垫资代付通道',
     '00000991' : '合肥平安T1代付通道',
     '00000910' : '银联客户资金清算'
@@ -130,3 +131,20 @@ def getChnlName(chnlId):
     except KeyError:
         name = "未知通道(%s)" % value
     return name
+
+#代付垫资类型 1-杉德垫资  0-通道垫资
+payChnlFundType = {
+    '00000653' : 1,
+    '00000991' : 1,
+    '00000910' : 1,
+    '00000160' : 0
+}
+
+#获取通道垫资类型
+def getFundType(chnlId):
+    value = chnlId.rstrip()
+    try:
+        type = payChnlFundType[value]
+    except KeyError:
+        type = -1
+    return type
