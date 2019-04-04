@@ -9,7 +9,7 @@ bin_id = '9892'
 db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSERSWT'], os.environ['DBPWDSWT'], os.environ['TNSNAME']),
                            encoding='gb18030')
 
-filename = "E:\\需求\\杉德系统数据变更\\商户池\\20190319第八批标扣/data20190319.sql"
+filename = "E:\\需求\\杉德系统数据变更\\商户池\\20190404标扣甘肃商户补充/data20190404.sql"
 fin = open(filename, "wb")
 
 
@@ -104,7 +104,7 @@ def genSql(mcc_cd, obj_mcht_cd, obj_term_id, mcht_name, area_cd, acq_ins_id):
 
 
 def main():
-    fileName = "E:\\需求\\杉德系统数据变更\\商户池\\20190319第八批标扣/第八批标扣.xls"
+    fileName = "E:\\需求\\杉德系统数据变更\\商户池\\20190404标扣甘肃商户补充/甘肃.xls"
     workbook = xlrd.open_workbook(fileName)
     sh = workbook.sheet_by_index(0)
     nrows = sh.nrows
