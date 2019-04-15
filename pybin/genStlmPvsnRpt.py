@@ -361,23 +361,12 @@ class txnInfo:
     def __init__(self, db, stlmDate):
         self.db = db
         self.stlmDate = stlmDate
-        self.mchtStlmAmt = 0
-        self.companyIncome = 0
-        self.insIncome = 0
-        self.diffChnlAmt = 0
-        self.riskLoan = 0
-        self.mchtPayAmtS0 = 0
-        self.mchtPayAmtT1 = 0
-        self.agentPayAmt = 0
-        self.companyIncomeOff = 0
 
         self.__get_mcht_stlm()
         self.__get_company_income()
         self.__get_ins_income()
         self.__get_risk_loan()
         self.__get_paytxn_amt()
-
-        self.calcChnlAmt = toNumberFmt(0 - self.mchtStlmAmt - self.companyIncome - self.insIncome - self.diffChnlAmt - self.riskLoan)
 
     #当日清算金额
     def __get_mcht_stlm(self):
@@ -389,6 +378,11 @@ class txnInfo:
         if x[0] is not None:
             self.mchtStlmAmt = toNumberFmt(x[0])
         cursor.close()
+
+    #计算异常核销金额,上日沉淀金额清算情况
+    def __get_last_day_off_txn(self):
+        sql = "select "
+
 
     #公司未划收入(公司收入),公司收入核销
     def __get_company_income(self):
