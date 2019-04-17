@@ -381,7 +381,28 @@ class txnInfo:
 
     #计算异常核销金额,上日沉淀金额清算情况
     def __get_last_day_off_txn(self):
-        sql = "select "
+        sql = "select a.ISS_FEE + a.SWT_FEE + a.PROD_FEE, b.TRANS_AMT, b.TRANS_FEE, b.PROFITS_AMT from " \
+              "(select * from TBL_STLM_TXN_BILL_DTL where stlm_date ='%s' and host_date ='%s' and CHNL_ID ='A001') a left join " \
+              "TBL_INS_PROFITS_TXN_DTL b on a.key_rsp = b.key_rsp" % (getLastDay(self.stlmDate), self.stlmDate)
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        lastAllCost = 0
+        self.lastMchtStlmAmt = 0
+        lastTransAmt = 0
+        lastTransFee = 0
+        self.lastInsIncome = 0
+        for ltData in cursor:
+            lastAllCost = lastAllCost + ltData[0]
+            lastTransAmt = lastTransAmt + ltData[1]
+            lastTransFee = lastTransFee + ltData[2]
+            self.lastInsIncome = self.lastInsIncome + ltData[3]
+
+        self.lastMchtStlmAmt = toNumberFmt(lastTransAmt - lastTransFee)
+        self.lastCompanyIncome = toNumberFmt(lastTransFee - lastAllCost - self.lastInsIncome)
+        self.lastInsIncome = toNumberFmt(self.lastInsIncome)
+
+        cursor.close()
+
 
 
     #公司未划收入(公司收入),公司收入核销
