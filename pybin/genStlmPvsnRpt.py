@@ -44,7 +44,7 @@ class rptFile():
 
     #交易-正反向交易（不含发卡退单）
     def recordTodayTxn(self, initAcct, mchtStlmAmt, companyIncome,
-                       insProfits, chnlAmt):
+                       insProfits):
         self.ws.cell(row=self.iCurr, column=1).value = initAcct.stlmDate
         self.ws.cell(row=self.iCurr, column=2).value = '交易-正反向交易（不含发卡退单）'
         initAcct.mchtStlmAmt = toNumberFmt(initAcct.mchtStlmAmt + mchtStlmAmt)
@@ -53,18 +53,34 @@ class rptFile():
         self.ws.cell(row=self.iCurr, column=6).value = companyIncome
         initAcct.insProfits = toNumberFmt(initAcct.insProfits + insProfits)
         self.ws.cell(row=self.iCurr, column=7).value = insProfits
+        chnlAmt = toNumberFmt(0 - mchtStlmAmt - companyIncome - insProfits)
         initAcct.chnlAmt = toNumberFmt(initAcct.chnlAmt + chnlAmt)
         self.ws.cell(row=self.iCurr, column=8).value = chnlAmt
         self.iCurr = self.iCurr + 1
 
-    #交易-异常，未识别商户
-    def recordUnknownMchtTxn(self):
+    #交易-异常，未识别商户(当日沉淀交易)
+    def recordUnknownMchtTxn(self, initAcct, abnormalAmt):
         self.ws.cell(row=self.iCurr, column=2).value = '交易-异常，未识别商户'
+        initAcct.abnormalDeposit = toNumberFmt(initAcct.abnormalDeposit + abnormalAmt)
+        self.ws.cell(row=self.iCurr, column=4).value = abnormalAmt
+        chnlAmt = toNumberFmt(0 - abnormalAmt)
+        initAcct.chnlAmt = toNumberFmt(initAcct.chnlAmt + chnlAmt)
+        self.ws.cell(row=self.iCurr, column=8).value = chnlAmt
         self.iCurr = self.iCurr + 1
 
-    #交易 - 异常核销，识别商户
-    def recordAbnormalWriteOff(self):
+    #交易 - 异常核销，识别商户(上日沉淀交易)
+    def recordAbnormalWriteOff(self, initAcct, mchtStlmAmt, companyIncome,
+                       insProfits):
         self.ws.cell(row=self.iCurr, column=2).value = '交易 - 异常核销，识别商户'
+        initAcct.mchtStlmAmt = toNumberFmt(initAcct.mchtStlmAmt + mchtStlmAmt)
+        self.ws.cell(row=self.iCurr, column=3).value = mchtStlmAmt
+        abnormalAmt = toNumberFmt(0 - mchtStlmAmt - companyIncome - insProfits)
+        initAcct.abnormalDeposit = toNumberFmt(initAcct.abnormalDeposit + abnormalAmt)
+        self.ws.cell(row=self.iCurr, column=4).value = abnormalAmt
+        initAcct.companyIncome = toNumberFmt(initAcct.companyIncome + companyIncome)
+        self.ws.cell(row=self.iCurr, column=6).value = companyIncome
+        initAcct.insProfits = toNumberFmt(initAcct.insProfits + insProfits)
+        self.ws.cell(row=self.iCurr, column=7).value = insProfits
         self.iCurr = self.iCurr + 1
 
     # 出金
@@ -368,6 +384,9 @@ class txnInfo:
         self.__get_risk_loan()
         self.__get_paytxn_amt()
 
+        self.__get_last_day_off_txn()
+        self.__get_cur_fund_amt()
+
     #当日清算金额
     def __get_mcht_stlm(self):
         sql = "select sum(TRANS_AMT - TRANS_FEE) from TBL_INS_PROFITS_TXN_SUM where " \
@@ -377,6 +396,8 @@ class txnInfo:
         x = cursor.fetchone()
         if x[0] is not None:
             self.mchtStlmAmt = toNumberFmt(x[0])
+        else:
+            self.mchtStlmAmt = 0.0
         cursor.close()
 
     #计算异常核销金额,上日沉淀金额清算情况
@@ -401,9 +422,11 @@ class txnInfo:
         self.lastCompanyIncome = toNumberFmt(lastTransFee - lastAllCost - self.lastInsIncome)
         self.lastInsIncome = toNumberFmt(self.lastInsIncome)
 
+        self.mchtStlmAmt = toNumberFmt(self.mchtStlmAmt - self.lastMchtStlmAmt)
+        self.companyIncome = toNumberFmt(self.companyIncome - self.lastCompanyIncome)
+        self.insIncome = toNumberFmt(self.insIncome - self.lastInsIncome)
+
         cursor.close()
-
-
 
     #公司未划收入(公司收入),公司收入核销
     def __get_company_income(self):
@@ -414,12 +437,16 @@ class txnInfo:
         x = cursor.fetchone()
         if x[0] is not None:
             self.companyIncome = toNumberFmt(x[0])
+        else:
+            self.companyIncome = 0
         sql = "select sum(PROFITS_AMT) from TBL_SAND_PROFITS_CHARGE_OFFS where CHARGE_DATE = '%s'" % self.stlmDate
         cursor = self.db.cursor()
         cursor.execute(sql)
         x = cursor.fetchone()
         if x[0] is not None:
             self.companyIncomeOff = toNumberFmt(x[0])
+        else:
+            self.companyIncomeOff = 0
         cursor.close()
 
     #机构合作商收入
@@ -431,6 +458,8 @@ class txnInfo:
         x = cursor.fetchone()
         if x[0] is not None:
             self.insIncome = toNumberFmt(x[0])
+        else:
+            self.insIncome = 0
         cursor.close()
 
 
@@ -449,6 +478,8 @@ class txnInfo:
         x = cursor.fetchone()
         if x[0] is not None:
             self.mchtPayAmtS0 = toNumberFmt(0 - x[0])
+        else:
+            self.mchtPayAmtS0 = 0
 
         #T1
         sql = "select sum(REAL_TRANS_AMT) from tbl_stlm_txn_bill_dtl where " \
@@ -457,6 +488,8 @@ class txnInfo:
         x = cursor.fetchone()
         if x[0] is not None:
             self.mchtPayAmtT1 = toNumberFmt(0 - x[0])
+        else:
+            self.mchtPayAmtT1 = 0
 
         #代理商收入
         sql = "select sum(trans_amt/100) from tbl_acq_txn_log where host_date ='%s' and " \
@@ -466,8 +499,22 @@ class txnInfo:
         if x[0] is not None:
             self.agentPayAmt = toNumberFmt(x[0])
             self.mchtPayAmtT1 = toNumberFmt(self.mchtPayAmtT1 - self.agentPayAmt)
+        else:
+            self.agentPayAmt = 0
         cursor.close()
 
+    #当日沉淀数据
+    def __get_cur_fund_amt(self):
+        sql = "select sum(REAL_TRANS_AMT - iss_fee - swt_fee - prod_fee) from tbl_stlm_txn_bill_dtl where chnl_id ='A001' and " \
+              "stlm_date ='%s' and host_date ='%s'" % (self.stlmDate, getNextDay(self.stlmDate))
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.curFundAmt = toNumberFmt(x[0])
+        else:
+            self.curFundAmt = 0
+        cursor.close()
 
 
 class lockInfo:
@@ -625,12 +672,12 @@ def main():
     #当天交易
     txnInf = txnInfo(db, stlm_date)
     rptxls.recordTodayTxn(stlmPvsnAcct, txnInf.mchtStlmAmt, txnInf.companyIncome,
-                          txnInf.insIncome, txnInf.calcChnlAmt)
+                          txnInf.insIncome)
     #交易-异常，未识别商户
-    rptxls.recordUnknownMchtTxn()
+    rptxls.recordUnknownMchtTxn(stlmPvsnAcct, txnInf.curFundAmt)
 
     #交易 - 异常核销，识别商户
-    rptxls.recordAbnormalWriteOff()
+    rptxls.recordAbnormalWriteOff(stlmPvsnAcct, txnInf.lastMchtStlmAmt, txnInf.lastCompanyIncome, txnInf.lastInsIncome)
     chnlPayAmt = chnlPayAmtInfo(db, stlm_date)
 
     #出金
