@@ -134,7 +134,7 @@ def main():
     print("errAmt:%.2f" % chnlbill.errAmt)
     print("chnlAmt:%.2f" % chnlbill.txnAmt)
 
-    if innerAmt - lastChnlFunds + chnlFunds + chnlbill.errAmt + longAmt != chnlbill.txnAmt:
+    if toNumberFmt(innerAmt - lastChnlFunds + chnlFunds + chnlbill.errAmt + longAmt) != toNumberFmt(chnlbill.txnAmt):
         bal_sta = '2'
     else:
         bal_sta = '1'
