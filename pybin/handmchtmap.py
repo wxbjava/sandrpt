@@ -9,7 +9,7 @@ bin_id = '9892'
 db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSERSWT'], os.environ['DBPWDSWT'], os.environ['TNSNAME']),
                            encoding='gb18030')
 
-filename = "E:\\需求\\杉德系统数据变更\\商户池\\20190404标扣甘肃商户补充/data20190404.sql"
+filename = "E:\\需求\\杉德系统数据变更\\商户池\\20190520第十批标扣/data20190520.sql"
 fin = open(filename, "wb")
 
 
@@ -77,7 +77,7 @@ def getMccInfo(mcc_cd):
     if x is not None:
         return x[0],x[1],x[2]
     else:
-        print("未查到")
+        print("未查到 %s" % mcc_cd)
         return '*','*','*'
 
 def genSql(mcc_cd, obj_mcht_cd, obj_term_id, mcht_name, area_cd, acq_ins_id):
@@ -104,18 +104,18 @@ def genSql(mcc_cd, obj_mcht_cd, obj_term_id, mcht_name, area_cd, acq_ins_id):
 
 
 def main():
-    fileName = "E:\\需求\\杉德系统数据变更\\商户池\\20190404标扣甘肃商户补充/甘肃.xls"
+    fileName = "E:\\需求\\杉德系统数据变更\\商户池\\20190520第十批标扣/第十批标扣 - 副本.xls"
     workbook = xlrd.open_workbook(fileName)
     sh = workbook.sheet_by_index(0)
     nrows = sh.nrows
 
-    i = 3
+    i = 1
     while i <  nrows:
-        mcht_cd = sh.cell(i, 0).value
-        term_id = sh.cell(i, 1).value
-        mcht_name = sh.cell(i, 4).value
-        mcc_cd = sh.cell(i, 5).value
-        area_cd = str(sh.cell(i, 6).value)[:4]
+        mcht_cd = str(sh.cell(i, 0).value).strip()
+        term_id = str(sh.cell(i, 1).value).strip()
+        mcht_name = str(sh.cell(i, 5).value).strip()
+        mcc_cd = str(sh.cell(i, 7).value)[:4]
+        area_cd = str(sh.cell(i, 8).value)[:4]
         acq_ins_id = '4827' + area_cd
         mcht_name = mcht_name.replace("'","‘")
         if len(mcht_name.encode('gb18030')) > 40:

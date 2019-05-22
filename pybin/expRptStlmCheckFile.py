@@ -210,7 +210,7 @@ def handleTxn02RptBody(db, ws, stlm_date):
     global i
     sql = "select pay_type, REAL_TRANS_AMT, prod_fee, ISS_FEE " \
           " from TBL_STLM_TXN_BILL_DTL " \
-          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' order by  pay_type" % (stlm_date)
+          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' and chnl_id ='A002' order by  pay_type" % (stlm_date)
     cursor = db.cursor()
     cursor.execute(sql)
     for ltTxn in cursor:
@@ -295,7 +295,7 @@ def handleTxn03RptBody(db, ws, stlm_date):
     global i
     sql = "select DEST_CHNL_ID, pay_type, count(*), sum(REAL_TRANS_AMT) " \
           " from TBL_STLM_TXN_BILL_DTL " \
-          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' group by DEST_CHNL_ID, pay_type" % (stlm_date)
+          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' and chnl_id ='A002' group by DEST_CHNL_ID, pay_type" % (stlm_date)
     cursor = db.cursor()
     cursor.execute(sql)
     for ltTxn in cursor:
@@ -431,7 +431,7 @@ def handleTxn05RptBody(db, ws, stlm_date):
     sql = "select trans_date, CHK_STA, key_rsp, CHNL_RETRIVL_REF, GROUP_ID, " \
           " pan " \
           " from TBL_ERR_CHK_TXN_DTL " \
-          "where host_date = '%s' and txn_num ='1801' and CHK_STA in ('1','2') order by  CHK_STA" % (stlm_date)
+          "where host_date = '%s' and txn_num ='1801' and GROUP_ID ='A002' and CHK_STA in ('1','2') order by  CHK_STA" % (stlm_date)
     cursor = db.cursor()
     cursor.execute(sql)
     for ltTxn in cursor:
