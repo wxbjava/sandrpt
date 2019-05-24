@@ -253,6 +253,8 @@ def tailTxn02RptBody(ws,i,stlmDate,payType,count,transAmt,prodAmt,costAmt):
         ws.cell(row=i, column=2).value = 'S0出款'
     elif payType == '01':
         ws.cell(row=i, column=2).value = 'T1出款'
+    elif payType == '03':
+        ws.cell(row=i, column=2).value = '代理商划款'
     else:
         ws.cell(row=i, column=2).value = '其他'
     ws.cell(row=i, column=3).value = count
@@ -280,12 +282,14 @@ def tailTxn03RptBody(ws,i,stlm_date,chnlId, type,count,transAmt):
         typeName = "S0"
     elif type == "01" :
         typeName = "T1"
+    elif type == "03" :
+        typeName = "代理商分润划款"
     else:
         typeName = "其他"
     ws.cell(row=i, column=3).value = typeName
     ws.cell(row=i, column=4).value = count
     ws.cell(row=i, column=5).value = toNumberFmt(transAmt * (-1))
-    if chnlId.rstrip() == '00000910':
+    if type == "03" :
         ws.cell(row=i, column=6).value = '代理商分润'
     else:
         ws.cell(row=i, column=6).value = '商户清算款'

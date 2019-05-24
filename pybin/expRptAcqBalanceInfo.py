@@ -78,8 +78,9 @@ class MchtBalance:
     def __get_oth_txn(self, db, dbacc, stlmDate):
         sql = "select count(*), sum(a.txn_amt) from tbl_err_chk_txn_dtl a " \
               "left join tbl_mcht_inf b on a.CARD_ACCP_ID = b.mcht_cd " \
+              "left join tbl_acq_txn_log c a.key_rsp = c.key_rsp" \
               "where a.host_date ='%s' and a.chk_sta='4' and company_cd = '%s' " \
-              " and a.txn_num ='1801'" % (stlmDate, self.insIdCd)
+              " and a.txn_num ='1801' and substr(c.ADDTNL_DATA,1,2) = '02'" % (stlmDate, self.insIdCd)
         print(sql)
         cursor = db.cursor()
         cursor.execute(sql)
@@ -93,7 +94,8 @@ class MchtBalance:
         sql = "select sum(a.TXN_AT - a.TXN_FEE_AT) from " \
               "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
               "left join (select * from t_txn_log where TXN_NUM='801011') b " \
-              "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' " % (stlmDate, self.insIdCd)
+              "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' and " \
+              "length(trim(ext_acct_id)) = 15" % (stlmDate, self.insIdCd)
         print(sql)
         cursor = dbacc.cursor()
         cursor.execute(sql)
@@ -118,6 +120,9 @@ class AgentBalance:
         self.agentInitAmt = 0.0
         self.agentFinalAmt = 0.0
         self.agentPay = 0.0
+        self.agentPayUnknownCount = 0
+        self.agentPayUnknownAmt = 0
+        self.agentPayUnknownRtn = 0.0
         self.agentIncome = 0.0
         self.agentDelayIncome = 0.0
         self.companyInitAmt = 0.0
@@ -238,6 +243,35 @@ class AgentBalance:
         if x is not None:
             self.agentPay = self.agentPay - toNumberFmt(x[0])
 
+    def __get_agent_pay_unknown(self):
+        sql = "select count(*), sum(a.txn_amt) from tbl_err_chk_txn_dtl a " \
+              "left join tbl_mcht_inf b on a.CARD_ACCP_ID = b.mcht_cd " \
+              "left join tbl_acq_txn_log c a.key_rsp = c.key_rsp" \
+              "where a.host_date ='%s' and a.chk_sta='4' and company_cd = '%s' " \
+              " and a.txn_num ='1801' and substr(c.ADDTNL_DATA,1,2) in ('04','05','06')" % (self.stlmDate, self.insIdCd)
+        print(sql)
+        cursor = self.dbbat.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.agentPayUnknownCount = toNumberFmt(x[0])
+            self.agentPayUnknownAmt = toNumberFmt(x[1])
+        cursor.close()
+
+        # 查找非当日代付退回记录
+        sql = "select sum(a.TXN_AT - a.TXN_FEE_AT) from " \
+              "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
+              "left join (select * from t_txn_log where TXN_NUM='801011') b " \
+              "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' and " \
+              "length(trim(ext_acct_id)) = 9" % (self.stlmDate, self.insIdCd)
+        print(sql)
+        cursor = self.dbacc.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.agentPayUnknownRtn = toNumberFmt(x[0])
+        cursor.close()
+
 
     def __get_company_income(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
@@ -345,11 +379,14 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     sql = "insert into TBL_RPT_INS_BALANCE_INF values (" \
           "'%s', '%s', %f, %d, %f, %f, %f, %f," \
           "%f, %d, %f, %d, %f, %f, 0, %f, %f, %f, %f," \
+          "%d, %f, %f," \
           "%f, %f, %f, %f, %f, %f, %f)" % (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,
                                             mchtBal.txnAmt, mchtBal.txnCost, mchtBal.errAmt, mchtBal.mchtFee,
                                             mchtBal.mchtStlmAmt, mchtBal.payTxnCount, mchtBal.payTxnAmt,
                                             mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.payPayTxnRtn, mchtBal.finalAmt,
-                                            agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay, agentBal.agentDelayIncome,
+                                            agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay,
+                                            agentBal.agentPayUnknownCount, agentBal.agentPayUnknownAmt, agentBal.agentPayUnknownRtn,
+                                           agentBal.agentDelayIncome,
                                            agentBal.agentFinalAmt,
                                             agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
                                             agentBal.companyDelayIncome, agentBal.companyFinalAmt)
