@@ -78,8 +78,8 @@ class MchtBalance:
     def __get_oth_txn(self, db, dbacc, stlmDate):
         sql = "select count(*), sum(a.txn_amt) from tbl_err_chk_txn_dtl a " \
               "left join tbl_mcht_inf b on a.CARD_ACCP_ID = b.mcht_cd " \
-              "left join tbl_acq_txn_log c a.key_rsp = c.key_rsp" \
-              "where a.host_date ='%s' and a.chk_sta='4' and company_cd = '%s' " \
+              "left join tbl_acq_txn_log c on a.key_rsp = c.key_rsp " \
+              "where a.host_date ='%s' and a.chk_sta='4' and b.company_cd = '%s' " \
               " and a.txn_num ='1801' and substr(c.ADDTNL_DATA,1,2) = '02'" % (stlmDate, self.insIdCd)
         print(sql)
         cursor = db.cursor()
@@ -91,11 +91,11 @@ class MchtBalance:
         cursor.close()
 
         #查找非当日代付退回记录
-        sql = "select sum(a.TXN_AT - a.TXN_FEE_AT) from " \
+        sql = "select sum(a.TXN_AT - a.TXN_FEE_AT)/100 from " \
               "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
               "left join (select * from t_txn_log where TXN_NUM='801011') b " \
-              "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' and " \
-              "length(trim(ext_acct_id)) = 15" % (stlmDate, self.insIdCd)
+              "on a.txn_key = b.txn_key where a.host_date != b.host_date and a.ACCP_BRH_ID = '%s' and " \
+              "length(trim(a.ext_acct_id)) = 15" % (stlmDate, self.insIdCd)
         print(sql)
         cursor = dbacc.cursor()
         cursor.execute(sql)
@@ -259,7 +259,7 @@ class AgentBalance:
         cursor.close()
 
         # 查找非当日代付退回记录
-        sql = "select sum(a.TXN_AT - a.TXN_FEE_AT) from " \
+        sql = "select sum(a.TXN_AT - a.TXN_FEE_AT)/100 from " \
               "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
               "left join (select * from t_txn_log where TXN_NUM='801011') b " \
               "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' and " \
@@ -390,7 +390,6 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
                                            agentBal.agentFinalAmt,
                                             agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
                                             agentBal.companyDelayIncome, agentBal.companyFinalAmt)
-
     cursor = db.cursor()
     cursor.execute(sql)
     cursor.close()
