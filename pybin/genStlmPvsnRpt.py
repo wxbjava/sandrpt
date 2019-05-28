@@ -493,7 +493,7 @@ class txnInfo:
 
         #代理商收入
         sql = "select sum(trans_amt/100) from tbl_acq_txn_log where host_date ='%s' and " \
-              "txn_num ='1801' and substrb(ADDTNL_DATA,1,2) ='04' and trans_state ='1'" % self.stlmDate
+              "txn_num ='1801' and substrb(ADDTNL_DATA,1,2) in ('04','05','06') and trans_state ='1'" % self.stlmDate
         cursor.execute(sql)
         x = cursor.fetchone()
         if x[0] is not None:
@@ -602,7 +602,7 @@ class chnlPayAmtInfo:
             start_date = getLastDay(x[0])
 
         sql = "select nvl(sum(REAL_TRANS_AMT),0), DEST_CHNL_ID from TBL_STLM_TXN_BILL_DTL where stlm_date >='%s' " \
-              " and stlm_date <='%s' group by DEST_CHNL_ID" % (start_date, end_date)
+              " and stlm_date <='%s' and chnl_id ='A002' group by DEST_CHNL_ID" % (start_date, end_date)
         cursor.execute(sql)
         for ltData in cursor:
             #通道垫资
@@ -618,7 +618,7 @@ class chnlPayAmtInfo:
         self.othLoanS0 = 0.0
         self.agentIncomePay = 0.0
         sql = "select nvl(sum(REAL_TRANS_AMT),0), DEST_CHNL_ID, pay_type from TBL_STLM_TXN_BILL_DTL where stlm_date ='%s' " \
-              " group by DEST_CHNL_ID,pay_type" % self.stlmDate
+              " and chnl_id ='A002' group by DEST_CHNL_ID,pay_type" % self.stlmDate
         cursor = self.db.cursor()
         cursor.execute(sql)
         for ltData in cursor:
