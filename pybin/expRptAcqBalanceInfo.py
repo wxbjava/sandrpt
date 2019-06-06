@@ -65,7 +65,7 @@ class MchtBalance:
 
         #计算代理商分润
         sql = "select count(*), nvl(sum(trans_amt/100),0) from tbl_acq_txn_log where host_date ='%s' and " \
-              "txn_num ='1801' and substrb(ADDTNL_DATA,1,2) ='04' and " \
+              "txn_num ='1801' and substrb(ADDTNL_DATA,1,2) in ('04','05','06') and " \
               "trans_state ='1' and company_cd ='%s'" % (stlmDate, self.insIdCd)
         cursor.execute(sql)
         x = cursor.fetchone()
@@ -226,7 +226,7 @@ class AgentBalance:
     def __get_agent_pay(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
               "where ACCEPT_DT ='%s' and acct_id ='%s' " \
-              "and ACCT_TYPE ='00000002' and INT_TXN_CD='01005'" % \
+              "and ACCT_TYPE ='00000002' and INT_TXN_CD in ('01005','01033')" % \
               (self.stlmDate, self.agentAcctId)
         cursor = self.dbacc.cursor()
         cursor.execute(sql)
@@ -235,8 +235,8 @@ class AgentBalance:
             self.agentPay = toNumberFmt(x[0])
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
               "where ACCEPT_DT ='%s' and acct_id ='%s' " \
-              "and ACCT_TYPE ='00000002' and INT_TXN_CD='01010'" % \
-              (self.stlmDate, self.agentAcctId)
+              "and ACCT_TYPE ='00000002' and INT_TXN_CD in ('01010','01034') and txn_part_cd like '%s%%'" % \
+              (self.stlmDate, self.agentAcctId, self.stlmDate[4:8])
         cursor.execute(sql)
         x = cursor.fetchone()
         cursor.close()
@@ -246,8 +246,8 @@ class AgentBalance:
     def __get_agent_pay_unknown(self):
         sql = "select count(*), sum(a.txn_amt) from tbl_err_chk_txn_dtl a " \
               "left join tbl_mcht_inf b on a.CARD_ACCP_ID = b.mcht_cd " \
-              "left join tbl_acq_txn_log c a.key_rsp = c.key_rsp" \
-              "where a.host_date ='%s' and a.chk_sta='4' and company_cd = '%s' " \
+              "left join tbl_acq_txn_log c on a.key_rsp = c.key_rsp " \
+              "where a.host_date ='%s' and a.chk_sta='4' and c.company_cd = '%s' " \
               " and a.txn_num ='1801' and substr(c.ADDTNL_DATA,1,2) in ('04','05','06')" % (self.stlmDate, self.insIdCd)
         print(sql)
         cursor = self.dbbat.cursor()
@@ -260,10 +260,10 @@ class AgentBalance:
 
         # 查找非当日代付退回记录
         sql = "select sum(a.TXN_AT - a.TXN_FEE_AT)/100 from " \
-              "(select * from t_txn_log where host_date ='%s' and TXN_NUM ='801012') a " \
-              "left join (select * from t_txn_log where TXN_NUM='801011') b " \
-              "on a.txn_key = b.txn_key where a.host_date != b.host_date and ACCP_BRH_ID = '%s' and " \
-              "length(trim(ext_acct_id)) = 9" % (self.stlmDate, self.insIdCd)
+              "(select * from t_txn_log where host_date ='%s' and TXN_NUM in ('801010','801034')) a " \
+              "left join (select * from t_txn_log where TXN_NUM in ('801005','801033')) b " \
+              "on a.txn_key = b.txn_key where a.host_date != b.host_date and a.ACCP_BRH_ID = '%s' and " \
+              "a.acct_id = '%s'" % (self.stlmDate, self.insIdCd, self.agentAcctId)
         print(sql)
         cursor = self.dbacc.cursor()
         cursor.execute(sql)
@@ -317,6 +317,7 @@ class AgentBalance:
         self.__get_company_balance_amt()
         self.__get_company_income()
         self.__get_company_pay()
+        self.__get_agent_pay_unknown()
 
 def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     i = 1
@@ -340,13 +341,16 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=15).value = '机构合作商期初余额'
     ws.cell(row=i, column=16).value = '机构合作商收入'
     ws.cell(row=i, column=17).value = '机构合作商划款'
-    ws.cell(row=i, column=18).value = '机构合作商待入账收入'
-    ws.cell(row=i, column=19).value = '机构合作商期末余额'
-    ws.cell(row=i, column=20).value = '杉德收入期初余额'
-    ws.cell(row=i, column=21).value = '杉德收入'
-    ws.cell(row=i, column=22).value = '杉德收入划款'
-    ws.cell(row=i, column=23).value = '杉德待入账收入'
-    ws.cell(row=i, column=24).value = '杉德收入未结余额'
+    ws.cell(row=i, column=18).value = '机构合作商划款未知笔数'
+    ws.cell(row=i, column=19).value = '机构合作商划款未知金额'
+    ws.cell(row=i, column=20).value = '机构合作商划款未知金额退回'
+    ws.cell(row=i, column=21).value = '机构合作商待入账收入'
+    ws.cell(row=i, column=22).value = '机构合作商期末余额'
+    ws.cell(row=i, column=23).value = '杉德收入期初余额'
+    ws.cell(row=i, column=24).value = '杉德收入'
+    ws.cell(row=i, column=25).value = '杉德收入划款'
+    ws.cell(row=i, column=26).value = '杉德待入账收入'
+    ws.cell(row=i, column=27).value = '杉德收入未结余额'
 
     #值
     i = i + 1
@@ -367,13 +371,16 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=15).value = agentBal.agentInitAmt
     ws.cell(row=i, column=16).value = agentBal.agentIncome
     ws.cell(row=i, column=17).value = agentBal.agentPay
-    ws.cell(row=i, column=18).value = agentBal.agentDelayIncome
-    ws.cell(row=i, column=19).value = agentBal.agentFinalAmt
-    ws.cell(row=i, column=20).value = agentBal.companyInitAmt
-    ws.cell(row=i, column=21).value = agentBal.companyIncome
-    ws.cell(row=i, column=22).value = agentBal.companyPay
-    ws.cell(row=i, column=23).value = agentBal.companyDelayIncome
-    ws.cell(row=i, column=24).value = agentBal.companyFinalAmt
+    ws.cell(row=i, column=18).value = agentBal.agentPayUnknownCount
+    ws.cell(row=i, column=19).value = agentBal.agentPayUnknownAmt
+    ws.cell(row=i, column=20).value = agentBal.agentPayUnknownRtn
+    ws.cell(row=i, column=21).value = agentBal.agentDelayIncome
+    ws.cell(row=i, column=22).value = agentBal.agentFinalAmt
+    ws.cell(row=i, column=23).value = agentBal.companyInitAmt
+    ws.cell(row=i, column=24).value = agentBal.companyIncome
+    ws.cell(row=i, column=25).value = agentBal.companyPay
+    ws.cell(row=i, column=26).value = agentBal.companyDelayIncome
+    ws.cell(row=i, column=27).value = agentBal.companyFinalAmt
 
     #插入数据库
     sql = "insert into TBL_RPT_INS_BALANCE_INF values (" \
