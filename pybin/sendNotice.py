@@ -6,15 +6,19 @@ import cx_Oracle
 from multiprocessing import Pool
 import os
 from hashlib import sha1
-from datetime import datetime
 import time
 import random
 import string
 import requests
+from utl.common import *
 
-appSecret = '2fec1d6e71bc'
-appKey="9a0183cea3f2f0e5df646017661bfcb7";
-proxy = {}
+appSecret = os.environ['APPSECRET']
+appKey = os.environ['APPKEY']
+proxy = {
+    'http':'172.17.2.19:3128',
+    'https':'172.17.2.19:3128'
+}
+proxy = {}  #开发环境不配置代理
 
 def getCheckSum(appSecret, nonce, curTime):
     signdata = appSecret + nonce + curTime
@@ -24,8 +28,7 @@ def getCheckSum(appSecret, nonce, curTime):
 
 
 def get_header():
-    now = datetime.now()
-    curTime = str(int(now.timestamp()))
+    curTime = getCurrUtcStr()
     nonce = ''.join(random.sample(string.ascii_letters + string.digits, 20))
     checksum = getCheckSum(appSecret, nonce, curTime)
     Content_Type = "application/x-www-form-urlencoded;charset=utf-8"
@@ -41,9 +44,28 @@ def sendMsg(toUser, msg):
     postdata = get_body(toUser, msg)
     head = get_header()
     response = requests.post(url, data=postdata, headers=head, proxies=proxy)
-    return response.json()
+    print(response.json())
+
+def updMsgSta(db, msgId):
+    sql = "update TBL_SND_NOTICE_LOG set sta ='1' where ind = %d" % msgId
+    cursor = db.cursor()
+    cursor.execute(sql)
+    db.commit()
+    cursor.close()
+
 
 def notice_agent(db, pl):
+    end_time = getDayTime(diffSec=300)
+    start_time = getDayTime(diffSec=-300)
+    sql = "select IND,ACCT_ID,MSG_CONTENT from TBL_SND_NOTICE_LOG where SEND_TIME <= '%s' and SEND_TIME >='%s' " \
+          "and ACCT_TYPE ='01' and send_tp ='1' and sta ='0'" % (end_time, start_time)
+    cursor = db.cursor()
+    cursor.execute(sql)
+    for ltData in cursor:
+        #更新数据
+        updMsgSta(db, ltData[0])
+        pl.apply_async(sendMsg, args=(ltData[1], ltData[2]))
+    cursor.close()
 
 
 def main():
@@ -51,7 +73,6 @@ def main():
                            encoding='gb18030')
     pl = Pool(10)
     #获取信息
-
     while 1:
         notice_agent(db, pl)
         time.sleep(1)
