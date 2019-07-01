@@ -19,6 +19,18 @@ def getNextDay(stlmDate):
     time_format = date.strftime('%Y%m%d')
     return time_format
 
+def getDayTime(diffSec=0):
+    now = datetime.datetime.now()
+    date = now + datetime.timedelta(seconds=diffSec)
+    time_format = date.strftime('%Y%m%d%H%M%S')
+    return time_format
+
+def getCurrUtcStr():
+    now = datetime.datetime.now()
+    return str(int(now.timestamp()))
+
+
+
 #¼ì²é½Ú¼ÙÈÕ
 def isHoliDay(db, stlmDate):
     cursor = db.cursor()
