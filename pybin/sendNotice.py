@@ -68,13 +68,30 @@ def notice_agent(db, pl):
     cursor.close()
 
 
+def reConnectDb(dbuser, dbpwd, tnsname):
+    while True:
+        try:
+            db = cx_Oracle.connect('%s/%s@%s' % (dbuser, dbpwd, tnsname), encoding='gb18030')
+            break
+        except Exception as e:
+            print(e)
+            time.sleep(10)
+    print('重连成功')
+    return db
+
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),
                            encoding='gb18030')
     pl = Pool(10)
     #获取信息
     while 1:
-        notice_agent(db, pl)
+        try:
+            notice_agent(db, pl)
+        except cx_Oracle.OperationalError as e:
+            error, = e.args
+            if error.code == 3113:
+                print('数据库重连')
+                db = reConnectDb(os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME'])
         time.sleep(1)
 
 
