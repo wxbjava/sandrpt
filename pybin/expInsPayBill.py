@@ -50,7 +50,6 @@ class rptFile():
 
         self.iCurr = self.iCurr + 1
 
-
     def getInsId(self):
         return self.ins_id_cd
 
@@ -59,12 +58,6 @@ class rptFile():
             filePath = '%s/%s/' % (os.environ['RPT7HOME'], self.stlm_date)
             self.wb.save('%s/InsPayBill_%s.xlsx'% (filePath, self.stlm_date))
             self.wb.close()
-
-
-
-
-
-
 
 def main():
     # 数据库连接配置
@@ -86,7 +79,7 @@ def main():
     #查找指定日期机构分润代付情况
     sql = "select a.key_rsp, a.TXN_NUM, a.TXN_DATE, a.TXN_TIME, trim(a.INS_ID_CD), trim(substrb(b.ADDTNL_DATA, 3, 28))," \
           "trim(substrb(b.ADDTNL_DATA, 31, 60)), trim(substrb(b.ADDTNL_DATA, 91, 12)), trim(substrb(b.ADDTNL_DATA, 103, 60)), " \
-          "b.trans_amt / 100, b.next_txn_key, b.MSQ_TYPE" \
+          "b.trans_amt / 100, b.next_txn_key, trim(b.MSQ_TYPE)" \
           "from TBL_STLM_TXN_BILL_DTL a left join tbl_acq_txn_log b on a.key_rsp = b.key_rsp " \
           "where a.host_date ='%s' and a.PAY_TYPE ='03' order by a.ins_id_cd, a.txn_date, a.txn_time " % stlm_date
     cursor = db.cursor()
@@ -103,10 +96,22 @@ def main():
         reqOrder = ltData[10]
         if ltData[1] == '1801':
             txnName = '代付'
-        txnType,
-        payAmt, acctNo, acctNm, bankId, bankNm
+        elif ltData[1] == '9164':
+            txnName = '退单'
+        else:
+            txnName = '未知交易'
+        if ltData[11] == '-2':
+            txnType = '平台代付'
+        else:
+            txnType = '接口代付'
+        payAmt = ltData[9]
+        acctNo = ltData[5]
+        acctNm = ltData[6]
+        bankId = ltData[7]
+        bankNm = ltData[8]
+        rptfile.tailData(instDate, instTime, payOrder, reqOrder, txnName, txnType,payAmt, acctNo, acctNm, bankId, bankNm)
 
-
+    rptfile.saveFile()
 
     print('hostDate %s rpt end' % stlm_date)
 
