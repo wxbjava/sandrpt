@@ -5,16 +5,15 @@
 
 import cx_Oracle
 import sys
-import datetime
 import hashlib
 import os
 from utl.common import *
 
 
 def getAcqIncome(db, stlmDate):
-    #收单收入
-    sql = "select sum(mcht_fee) - sum(ISS_FEE+SWT_FEE+PROD_FEE)  " \
-          "from TBL_STLM_TXN_BILL_DTL where host_date = '%s' and txn_num ='1011' and check_sta ='1'" % stlmDate
+    #杉德收入
+    sql = "select sum(ALL_PROFITS) " \
+          "from TBL_SAND_ACQ_PROFITS where host_date = '%s' " % stlmDate
     cursor = db.cursor()
     cursor.execute(sql)
     x = cursor.fetchone()
@@ -23,19 +22,7 @@ def getAcqIncome(db, stlmDate):
         acqIncome = toNumberFmt(x[0])
     else:
         acqIncome = 0
-
-    #代理商收益
-    sql = "select sum(ALL_PROFITS) from TBL_INS_PROFITS_TXN_SUM where host_date = '%s'" % stlmDate
-    cursor = db.cursor()
-    cursor.execute(sql)
-    x = cursor.fetchone()
-    cursor.close()
-    if x is not None :
-        agentIncom = toNumberFmt(x[0])
-    else:
-        agentIncom = 0
-
-    return acqIncome - agentIncom
+    return acqIncome
 
 def get_file_sha1(f):
     m = hashlib.sha1()
