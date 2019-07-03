@@ -9,7 +9,7 @@ from openpyxl.workbook import Workbook
 from utl.common import *
 
 class rptFile():
-    def __init__(self, ins_id_cd = None, stlm_date = None):
+    def __init__(self, ins_id_cd=None, stlm_date=None):
         self.iCurr = 1
         self.ins_id_cd = ins_id_cd
         self.stlm_date = stlm_date
@@ -27,7 +27,26 @@ class rptFile():
         self.ws.cell(row=self.iCurr, column=5).value = '交易类型'
         self.ws.cell(row=self.iCurr, column=6).value = '发起方式'
         self.ws.cell(row=self.iCurr, column=7).value = '代付金额'
-        self.ws.cell(row=self.iCurr, column=8).value = '日期'
+        self.ws.cell(row=self.iCurr, column=8).value = '结算卡'
+        self.ws.cell(row=self.iCurr, column=9).value = '结算账户名'
+        self.ws.cell(row=self.iCurr, column=10).value = '联行号'
+        self.ws.cell(row=self.iCurr, column=11).value = '银行名称'
+
+        self.iCurr = self.iCurr + 1
+
+    def tailData(self, instDate, instTime, payOrder, reqOrder, txnName, txnType,
+                 payAmt, acctNo, acctNm, bankId, bankNm):
+        self.ws.cell(row=self.iCurr, column=1).value = instDate
+        self.ws.cell(row=self.iCurr, column=2).value = instTime
+        self.ws.cell(row=self.iCurr, column=3).value = payOrder
+        self.ws.cell(row=self.iCurr, column=4).value = reqOrder
+        self.ws.cell(row=self.iCurr, column=5).value = txnName
+        self.ws.cell(row=self.iCurr, column=6).value = txnType
+        self.ws.cell(row=self.iCurr, column=7).value = payAmt
+        self.ws.cell(row=self.iCurr, column=8).value = acctNo
+        self.ws.cell(row=self.iCurr, column=9).value = acctNm
+        self.ws.cell(row=self.iCurr, column=10).value = bankId
+        self.ws.cell(row=self.iCurr, column=11).value = bankNm
 
         self.iCurr = self.iCurr + 1
 
@@ -78,6 +97,14 @@ def main():
         if ins_id_cd != rptfile.getInsId():
             rptfile.saveFile()
             rptfile = rptFile(ins_id_cd = ins_id_cd, stlm_date = stlm_date)
+        instDate = ltData[2]
+        instTime = ltData[3]
+        payOrder = ltData[4]
+        reqOrder = ltData[10]
+        if ltData[1] == '1801':
+            txnName = '代付'
+        txnType,
+        payAmt, acctNo, acctNm, bankId, bankNm
 
 
 
