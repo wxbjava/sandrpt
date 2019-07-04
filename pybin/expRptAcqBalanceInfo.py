@@ -282,9 +282,17 @@ class AgentBalance:
         cursor = self.dbacc.cursor()
         cursor.execute(sql)
         x = cursor.fetchone()
-        cursor.close()
         if x is not None:
             self.companyIncome = toNumberFmt(x[0])
+        sql = "select nvl(sum(TXN_AT/100),0) from t_txn_dtl " \
+              "where ACCEPT_DT ='%s' and acct_id ='%s' " \
+              "and ACCT_TYPE ='00000002' and INT_TXN_CD='01003' and txn_part_cd not like '%%核销%%' " % \
+              (self.stlmDate, self.companyAcctId)
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            self.companyIncome = toNumberFmt(self.companyIncome - x[0])
+        cursor.close()
 
         # 计算交易日对应收入
         sql = "select sum(ALL_PROFITS) from TBL_SAND_ACQ_PROFITS where " \
@@ -299,7 +307,7 @@ class AgentBalance:
     def __get_company_pay(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
               "where ACCEPT_DT ='%s' and acct_id ='%s' " \
-              "and ACCT_TYPE ='00000002' and CR_DB_CD='0'" % \
+              "and ACCT_TYPE ='00000002' and CR_DB_CD='0' and txn_part_cd like '%%核销%%'" % \
               (self.stlmDate, self.companyAcctId)
         cursor = self.dbacc.cursor()
         cursor.execute(sql)
