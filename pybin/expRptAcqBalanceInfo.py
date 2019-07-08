@@ -173,6 +173,15 @@ class AgentBalance:
         if x[0] is not None:
             self.agentFinalAmt = toNumberFmt(x[0]/100)
 
+        sql = "select sum(INS_B_PREV_BAL_AT - INS_B_PREV_AVAIL_AT) from " \
+              "TBL_SAND_BALANCE_INF where host_date ='%s' and INS_ID_CD ='%s'" % (self.stlmDate, self.insIdCd)
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.agentFinalLockAmt = toNumberFmt(x[0] / 100)
+        else :
+            self.agentFinalLockAmt = 0
+
         cursor.close()
 
     def __get_company_balance_amt(self):
@@ -193,24 +202,16 @@ class AgentBalance:
         cursor.close()
 
     def __get_agent_income(self):
-        sql = "select sum(TXN_AT/100) from t_txn_dtl " \
-              "where ACCEPT_DT ='%s' and acct_id ='%s' " \
-              "and ACCT_TYPE ='00000002' and INT_TXN_CD='01004'" % \
-              (self.stlmDate, self.agentAcctId)
+        sql = "select sum(ALL_PROFITS) from " \
+              "TBL_INS_PROFITS_TXN_SUM where " \
+              "host_date <'%s' and INS_ID_CD ='%s' and to_char(REC_UPD_TS, 'YYYYMMDD') = '%s'" % \
+              (self.stlmDate, self.insIdCd, self.stlmDate)
         print(sql)
-        cursor = self.dbacc.cursor()
+        cursor = self.dbbat.cursor()
         cursor.execute(sql)
         x = cursor.fetchone()
         if x is not None:
             self.agentIncome = toNumberFmt(x[0])
-        sql = "select sum(TXN_AT/100) from t_txn_dtl " \
-              "where ACCEPT_DT ='%s' and acct_id ='%s' " \
-              "and ACCT_TYPE ='00000002' and INT_TXN_CD='01003'" % \
-              (self.stlmDate, self.agentAcctId)
-        cursor.execute(sql)
-        x = cursor.fetchone()
-        if x is not None:
-            self.agentIncome = self.agentIncome - toNumberFmt(x[0])
         cursor.close()
 
         #计算交易日对应收入
@@ -272,6 +273,26 @@ class AgentBalance:
             self.agentPayUnknownRtn = toNumberFmt(x[0])
         cursor.close()
 
+    def __get_agent_lockamt(self):
+        #冻结
+        sql = "select sum(LOCK_AT)/100 from T_TXN_LOCK where " \
+              "host_date ='%s' and TXN_TYPE ='01' and acct_id ='%s'" % (self.stlmDate, self.companyAcctId)
+        self.agentLockAmt = 0
+        cursor = self.dbacc.cursor()
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.agentLockAmt = toNumberFmt(x[0])
+
+        #解冻
+        sql = "select sum(LOCK_AT)/100 from T_TXN_LOCK where " \
+              "host_date ='%s' and TXN_TYPE ='02' and acct_id ='%s'" % (self.stlmDate, self.companyAcctId)
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x[0] is not None:
+            self.agentLockAmt = toNumberFmt(self.agentLockAmt - x[0])
+
+        cursor.close()
 
     def __get_company_income(self):
         sql = "select sum(TXN_AT/100) from t_txn_dtl " \
@@ -322,10 +343,34 @@ class AgentBalance:
         self.__get_agent_balance_amt()
         self.__get_agent_income()
         self.__get_agent_pay()
+        self.__get_agent_lockamt()
         self.__get_company_balance_amt()
         self.__get_company_income()
         self.__get_company_pay()
         self.__get_agent_pay_unknown()
+
+def insertDb(stlmDate, db, mchtBal, agentBal):
+    sql = "insert into TBL_RPT_INS_BALANCE_INF (host_date,ins_id_cd,mcht_init_at,txn_count,txn_amt,txn_cost,err_amt," \
+          "mcht_fee,mcht_stlm_amt,pay_txn_count,pay_txn_amt,pay_unknown_count,pay_unknown_amt,pay_txn_rtn_amt," \
+          "mcht_sys_diff_at,mcht_final_at,agent_init_at,agent_income,agent_err_amt,agent_pay,agent_pay_unknown_count," \
+          "agent_pay_unknown_amt,agent_pay_txn_rtn_amt,agent_delay_income,agent_lock_amt,agent_final_lock_amt," \
+          "agent_final_at,company_init_at,company_income,company_pay,company_delay_income,company_final_at) values (" \
+          ":1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11,:12,:13,:14,:15,:16,:17,:18,:19," \
+          ":20,:21,:22,:23,:24,:25,:26,:27,:28,:29,:30,:31,:32)"
+    cursor = db.cursor()
+    cursor.prepare(sql)
+    param = (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,mchtBal.txnAmt, mchtBal.txnCost,
+             mchtBal.errAmt, mchtBal.mchtFee,mchtBal.mchtStlmAmt, mchtBal.payTxnCount, mchtBal.payTxnAmt,
+                                            mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.payPayTxnRtn, 0, mchtBal.finalAmt,
+                                            agentBal.agentInitAmt, agentBal.agentIncome, 0, agentBal.agentPay,
+                                            agentBal.agentPayUnknownCount, agentBal.agentPayUnknownAmt, agentBal.agentPayUnknownRtn,
+                                           agentBal.agentDelayIncome, 0, 0,
+                                           agentBal.agentFinalAmt,
+                                            agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
+                                            agentBal.companyDelayIncome, agentBal.companyFinalAmt)
+    cursor.execute(None, param)
+    cursor.close()
+
 
 def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     i = 1
@@ -348,17 +393,20 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=14).value = '商户期末余额'
     ws.cell(row=i, column=15).value = '机构合作商期初余额'
     ws.cell(row=i, column=16).value = '机构合作商收入'
-    ws.cell(row=i, column=17).value = '机构合作商划款'
-    ws.cell(row=i, column=18).value = '机构合作商划款未知笔数'
-    ws.cell(row=i, column=19).value = '机构合作商划款未知金额'
-    ws.cell(row=i, column=20).value = '机构合作商划款未知金额退回'
-    ws.cell(row=i, column=21).value = '机构合作商待入账收入'
-    ws.cell(row=i, column=22).value = '机构合作商期末余额'
-    ws.cell(row=i, column=23).value = '杉德收入期初余额'
-    ws.cell(row=i, column=24).value = '杉德收入'
-    ws.cell(row=i, column=25).value = '杉德收入划款'
-    ws.cell(row=i, column=26).value = '杉德待入账收入'
-    ws.cell(row=i, column=27).value = '杉德收入未结余额'
+    ws.cell(row=i, column=17).value = '机构合作商差错费'
+    ws.cell(row=i, column=18).value = '机构合作商划款'
+    ws.cell(row=i, column=19).value = '机构合作商划款未知笔数'
+    ws.cell(row=i, column=20).value = '机构合作商划款未知金额'
+    ws.cell(row=i, column=21).value = '机构合作商划款未知金额退回'
+    ws.cell(row=i, column=22).value = '机构合作商待入账收入'
+    ws.cell(row=i, column=23).value = '机构合作商冻结解冻金额'
+    ws.cell(row=i, column=24).value = '机构合作商冻结总额'
+    ws.cell(row=i, column=25).value = '机构合作商期末余额'
+    ws.cell(row=i, column=26).value = '杉德收入期初余额'
+    ws.cell(row=i, column=27).value = '杉德收入'
+    ws.cell(row=i, column=28).value = '杉德收入划款'
+    ws.cell(row=i, column=29).value = '杉德待入账收入'
+    ws.cell(row=i, column=30).value = '杉德收入未结余额'
 
     #值
     i = i + 1
@@ -378,36 +426,22 @@ def genRptFunc(stlmDate, db, ws, mchtBal, agentBal):
     ws.cell(row=i, column=14).value = mchtBal.finalAmt
     ws.cell(row=i, column=15).value = agentBal.agentInitAmt
     ws.cell(row=i, column=16).value = agentBal.agentIncome
-    ws.cell(row=i, column=17).value = agentBal.agentPay
-    ws.cell(row=i, column=18).value = agentBal.agentPayUnknownCount
-    ws.cell(row=i, column=19).value = agentBal.agentPayUnknownAmt
-    ws.cell(row=i, column=20).value = agentBal.agentPayUnknownRtn
-    ws.cell(row=i, column=21).value = agentBal.agentDelayIncome
-    ws.cell(row=i, column=22).value = agentBal.agentFinalAmt
-    ws.cell(row=i, column=23).value = agentBal.companyInitAmt
-    ws.cell(row=i, column=24).value = agentBal.companyIncome
-    ws.cell(row=i, column=25).value = agentBal.companyPay
-    ws.cell(row=i, column=26).value = agentBal.companyDelayIncome
-    ws.cell(row=i, column=27).value = agentBal.companyFinalAmt
+    ws.cell(row=i, column=17).value = 0
+    ws.cell(row=i, column=18).value = agentBal.agentPay
+    ws.cell(row=i, column=19).value = agentBal.agentPayUnknownCount
+    ws.cell(row=i, column=20).value = agentBal.agentPayUnknownAmt
+    ws.cell(row=i, column=21).value = agentBal.agentPayUnknownRtn
+    ws.cell(row=i, column=22).value = agentBal.agentDelayIncome
+    ws.cell(row=i, column=23).value = agentBal.agentLockAmt
+    ws.cell(row=i, column=24).value = agentBal.agentFinalLockAmt
+    ws.cell(row=i, column=25).value = agentBal.agentFinalAmt
+    ws.cell(row=i, column=26).value = agentBal.companyInitAmt
+    ws.cell(row=i, column=27).value = agentBal.companyIncome
+    ws.cell(row=i, column=28).value = agentBal.companyPay
+    ws.cell(row=i, column=29).value = agentBal.companyDelayIncome
+    ws.cell(row=i, column=30).value = agentBal.companyFinalAmt
 
-    #插入数据库
-    sql = "insert into TBL_RPT_INS_BALANCE_INF values (" \
-          "'%s', '%s', %f, %d, %f, %f, %f, %f," \
-          "%f, %d, %f, %d, %f, %f, 0, %f, %f, %f, %f," \
-          "%d, %f, %f," \
-          "%f, %f, %f, %f, %f, %f, %f)" % (stlmDate, mchtBal.insIdCd, mchtBal.initAmt, mchtBal.txnCount,
-                                            mchtBal.txnAmt, mchtBal.txnCost, mchtBal.errAmt, mchtBal.mchtFee,
-                                            mchtBal.mchtStlmAmt, mchtBal.payTxnCount, mchtBal.payTxnAmt,
-                                            mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.payPayTxnRtn, mchtBal.finalAmt,
-                                            agentBal.agentInitAmt, agentBal.agentIncome, agentBal.agentPay,
-                                            agentBal.agentPayUnknownCount, agentBal.agentPayUnknownAmt, agentBal.agentPayUnknownRtn,
-                                           agentBal.agentDelayIncome,
-                                           agentBal.agentFinalAmt,
-                                            agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
-                                            agentBal.companyDelayIncome, agentBal.companyFinalAmt)
-    cursor = db.cursor()
-    cursor.execute(sql)
-    cursor.close()
+    insertDb(stlmDate, db, mchtBal, agentBal)
 
 def main():
     # 数据库连接配置
