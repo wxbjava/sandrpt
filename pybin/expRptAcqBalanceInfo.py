@@ -364,7 +364,7 @@ def insertDb(stlmDate, db, mchtBal, agentBal):
                                             mchtBal.payUnknownCount, mchtBal.payUnknownAmt, mchtBal.payPayTxnRtn, 0, mchtBal.finalAmt,
                                             agentBal.agentInitAmt, agentBal.agentIncome, 0, agentBal.agentPay,
                                             agentBal.agentPayUnknownCount, agentBal.agentPayUnknownAmt, agentBal.agentPayUnknownRtn,
-                                           agentBal.agentDelayIncome, 0, 0,
+                                           agentBal.agentDelayIncome, agentBal.agentLockAmt, agentBal.agentFinalLockAmt,
                                            agentBal.agentFinalAmt,
                                             agentBal.companyInitAmt, agentBal.companyIncome, agentBal.companyPay,
                                             agentBal.companyDelayIncome, agentBal.companyFinalAmt)
