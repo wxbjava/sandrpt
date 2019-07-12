@@ -276,7 +276,7 @@ class AgentBalance:
     def __get_agent_lockamt(self):
         #¶³½á
         sql = "select sum(LOCK_AT)/100 from T_TXN_LOCK where " \
-              "host_date ='%s' and TXN_TYPE ='01' and acct_id ='%s'" % (self.stlmDate, self.companyAcctId)
+              "host_date ='%s' and TXN_TYPE ='01' and acct_id ='%s'" % (self.stlmDate, self.agentAcctId)
         self.agentLockAmt = 0
         cursor = self.dbacc.cursor()
         cursor.execute(sql)
@@ -286,7 +286,7 @@ class AgentBalance:
 
         #½â¶³
         sql = "select sum(LOCK_AT)/100 from T_TXN_LOCK where " \
-              "host_date ='%s' and TXN_TYPE ='02' and acct_id ='%s'" % (self.stlmDate, self.companyAcctId)
+              "host_date ='%s' and TXN_TYPE ='02' and acct_id ='%s'" % (self.stlmDate, self.agentAcctId)
         cursor.execute(sql)
         x = cursor.fetchone()
         if x[0] is not None:
