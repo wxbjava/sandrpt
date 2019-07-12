@@ -31,11 +31,12 @@ class rptFile():
         self.ws.cell(row=self.iCurr, column=9).value = '结算账户名'
         self.ws.cell(row=self.iCurr, column=10).value = '联行号'
         self.ws.cell(row=self.iCurr, column=11).value = '银行名称'
+        self.ws.cell(row=self.iCurr, column=12).value = '交易备注'
 
         self.iCurr = self.iCurr + 1
 
     def tailData(self, instDate, instTime, payOrder, reqOrder, txnName, txnType,
-                 payAmt, acctNo, acctNm, bankId, bankNm):
+                 payAmt, acctNo, acctNm, bankId, bankNm, payDesc):
         self.ws.cell(row=self.iCurr, column=1).value = instDate
         self.ws.cell(row=self.iCurr, column=2).value = instTime
         self.ws.cell(row=self.iCurr, column=3).value = payOrder
@@ -47,6 +48,7 @@ class rptFile():
         self.ws.cell(row=self.iCurr, column=9).value = acctNm
         self.ws.cell(row=self.iCurr, column=10).value = bankId
         self.ws.cell(row=self.iCurr, column=11).value = bankNm
+        self.ws.cell(row=self.iCurr, column=12).value = payDesc
 
         self.iCurr = self.iCurr + 1
 
@@ -56,8 +58,23 @@ class rptFile():
     def saveFile(self):
         if self.wb != None:
             filePath = '%s/%s/' % (os.environ['RPT7HOME'], self.stlm_date)
-            self.wb.save('%s/InsPayBill_%s.xlsx'% (filePath, self.stlm_date))
+            self.wb.save('%s/InsPayBill_%s_%s.xlsx'% (filePath, self.ins_id_cd, self.stlm_date))
             self.wb.close()
+
+def getDesc(db, keyRsp):
+    sql = "select substrb(key_cancel,1,16) from tbl_acq_txn_log where key_rsp = '%s'" % keyRsp
+    cursor = db.cursor()
+    cursor.execute(sql)
+    x = cursor.fetchone()
+    if x is not None:
+        sql = "select trim(PAY_DESC) from TBL_DEST_PAY_LOG where key_rsp = '%s'" % x[0]
+        cursor.execute(sql)
+        x = cursor.fetchone()
+        if x is not None:
+            return x[0]
+
+    return " "
+
 
 def main():
     # 数据库连接配置
@@ -92,15 +109,17 @@ def main():
             rptfile = rptFile(ins_id_cd = ins_id_cd, stlm_date = stlm_date)
         instDate = ltData[2]
         instTime = ltData[3]
-        payOrder = ltData[4]
+        payOrder = ltData[0]
         reqOrder = ltData[10]
+        payDesc = ''
         if ltData[1] == '1801':
             txnName = '代付'
         elif ltData[1] == '9164':
             txnName = '退单'
         else:
-            txnName = '未知交易'
+            txnName = '未知类型'
         if ltData[11] == '-2':
+            payDesc = getDesc(db, payOrder)
             txnType = '平台代付'
         else:
             txnType = '接口代付'
@@ -109,7 +128,7 @@ def main():
         acctNm = ltData[6]
         bankId = ltData[7]
         bankNm = ltData[8]
-        rptfile.tailData(instDate, instTime, payOrder, reqOrder, txnName, txnType,payAmt, acctNo, acctNm, bankId, bankNm)
+        rptfile.tailData(instDate, instTime, payOrder, reqOrder, txnName, txnType,payAmt, acctNo, acctNm, bankId, bankNm, payDesc)
 
     rptfile.saveFile()
 
