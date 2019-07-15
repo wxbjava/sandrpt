@@ -11,6 +11,12 @@ import random
 import string
 import requests
 from utl.common import *
+import logging as log
+
+log.basicConfig(level=log.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S',
+                handlers={log.FileHandler(filename=os.environ['HOME'] + '/log/sendNotice.log', mode='a', encoding='gb18030')})
 
 appSecret = os.environ['APPSECRET']
 appKey = os.environ['APPKEY']
@@ -37,6 +43,7 @@ def get_header():
 
 def get_body(toUser, msg):
     data = 'from=zhangsan&ope=0&to=%s&type=0&body={"msg":"%s"}' % (toUser, msg)
+    log.info(data)
     return data.encode('utf-8')
 
 def sendMsg(toUser, msg):
@@ -44,7 +51,7 @@ def sendMsg(toUser, msg):
     postdata = get_body(toUser, msg)
     head = get_header()
     response = requests.post(url, data=postdata, headers=head, proxies=proxy)
-    print(response.json())
+    log.info(response.json())
 
 def updMsgSta(db, msgId):
     sql = "update TBL_SND_NOTICE_LOG set sta ='1' where ind = %d" % msgId
@@ -55,7 +62,7 @@ def updMsgSta(db, msgId):
 
 
 def notice_agent(db, pl):
-    end_time = getDayTime(diffSec=300)
+    end_time = getDayTime()
     start_time = getDayTime(diffSec=-300)
     sql = "select IND,ACCT_ID,MSG_CONTENT from TBL_SND_NOTICE_LOG where SEND_TIME <= '%s' and SEND_TIME >='%s' " \
           "and ACCT_TYPE ='01' and send_tp ='1' and sta ='0'" % (end_time, start_time)
@@ -74,13 +81,16 @@ def reConnectDb(dbuser, dbpwd, tnsname):
             db = cx_Oracle.connect('%s/%s@%s' % (dbuser, dbpwd, tnsname), encoding='gb18030')
             break
         except Exception as e:
-            print(e)
+            log.info(e)
             time.sleep(10)
-    print('重连成功')
+    log.info('reconn success')
     return db
 
+def work(n):
+    log.info('test %d', n)
+
 def main():
-    db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),
+    db = cx_Oracle.connect('%s/%s@%s' % (os.environ['ONLDBUSER'], os.environ['ONLDBPWD'], os.environ['TNSNAME']),
                            encoding='gb18030')
     pl = Pool(10)
     #获取信息
@@ -90,8 +100,8 @@ def main():
         except cx_Oracle.OperationalError as e:
             error, = e.args
             if error.code == 3113:
-                print('数据库重连')
-                db = reConnectDb(os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME'])
+                log.info('db connect restart')
+                db = reConnectDb(os.environ['ONLDBUSER'], os.environ['ONLDBPWD'], os.environ['TNSNAME'])
         time.sleep(1)
 
 
