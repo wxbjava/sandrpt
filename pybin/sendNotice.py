@@ -42,7 +42,13 @@ def get_header():
     return header
 
 def get_body(toUser, msg):
-    data = 'from=zhangsan&ope=0&to=%s&type=0&body={"msg":"%s"}' % (toUser, msg)
+    data = 'from=10000&ope=0&to=%s&type=0&body={"msg":"%s"}' % (toUser, msg)
+    log.info(data)
+    return data.encode('utf-8')
+
+def get_batch_body(toAccts, msg):
+    toAcctList = ('%s' % toAccts).replace('\'', '"')
+    data = 'fromAccid=10000&toAccids=%s&type=0&body={"msg":"%s"}' % (toAcctList, msg)
     log.info(data)
     return data.encode('utf-8')
 
@@ -52,6 +58,45 @@ def sendMsg(toUser, msg):
     head = get_header()
     response = requests.post(url, data=postdata, headers=head, proxies=proxy)
     log.info(response.json())
+
+def sendBatMsg(toUser, msg):
+    url = 'https://api.netease.im/nimserver/msg/sendBatchMsg.action'
+    postdata = get_batch_body(toUser, msg)
+    head = get_header()
+    response = requests.post(url, data=postdata, headers=head, proxies=proxy)
+    log.info(response.json())
+
+def sendBatMsgByType(batType, msg):
+    db = cx_Oracle.connect('%s/%s@%s' % (os.environ['ONLDBUSER'], os.environ['ONLDBPWD'], os.environ['TNSNAME']),
+                           encoding='gb18030')
+    #获取推送列表
+    if batType == 'A0000001':
+        #所有一代推送
+        sql = "select agent_cd from tbl_mcht_agent where ext5='1' and EXT2='09970000' and  PUSH_ID='0'"
+    elif batType == 'A0000002':
+        #推送所有代理
+        sql = "select agent_cd from tbl_mcht_agent where EXT2='09970000' and  PUSH_ID='0'"
+    else:
+        log.error("未知类型")
+        return
+    log.info(sql)
+    cursor = db.cursor()
+    cursor.execute(sql)
+    i = 0
+    toAccts = []
+    for ltData in cursor:
+        toAccts.append(ltData[0])
+        i = i + 1
+        if i == 500:
+            sendBatMsg(toAccts, msg)
+            toAccts = []
+            i = 0
+            time.sleep(0.5)
+
+    if i > 0:
+        sendBatMsg(toAccts, msg)
+    cursor.close()
+
 
 def updMsgSta(db, msgId):
     sql = "update TBL_SND_NOTICE_LOG set sta ='1' where ind = %d" % msgId
@@ -64,14 +109,19 @@ def updMsgSta(db, msgId):
 def notice_agent(db, pl):
     end_time = getDayTime()
     start_time = getDayTime(diffSec=-300)
-    sql = "select IND,ACCT_ID,MSG_CONTENT from TBL_SND_NOTICE_LOG where SEND_TIME <= '%s' and SEND_TIME >='%s' " \
-          "and ACCT_TYPE ='01' and send_tp ='1' and sta ='0'" % (end_time, start_time)
+    sql = "select IND,trim(ACCT_ID),ACCT_TYPE,MSG_CONTENT from TBL_SND_NOTICE_LOG where SEND_TIME <= '%s' and SEND_TIME >='%s' " \
+          "and ACCT_TYPE in ('01','03') and send_tp ='1' and sta ='0'" % (end_time, start_time)
     cursor = db.cursor()
     cursor.execute(sql)
     for ltData in cursor:
         #更新数据
         updMsgSta(db, ltData[0])
-        pl.apply_async(sendMsg, args=(ltData[1], ltData[2]))
+        if ltData[2] == '03':
+            #类型批量发送
+            pl.apply_async(sendBatMsgByType, args=(ltData[1], ltData[3],))
+
+        else:
+            pl.apply_async(sendMsg, args=(ltData[1], ltData[3],))
     cursor.close()
 
 
@@ -86,8 +136,6 @@ def reConnectDb(dbuser, dbpwd, tnsname):
     log.info('reconn success')
     return db
 
-def work(n):
-    log.info('test %d', n)
 
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['ONLDBUSER'], os.environ['ONLDBPWD'], os.environ['TNSNAME']),
@@ -107,5 +155,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
