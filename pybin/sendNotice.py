@@ -3,7 +3,7 @@
 #推送信息
 
 import cx_Oracle
-from multiprocessing import Pool
+from multiprocessing.pool import ThreadPool
 import os
 from hashlib import sha1
 import time
@@ -72,10 +72,10 @@ def sendBatMsgByType(batType, msg):
     #获取推送列表
     if batType == 'A0000001':
         #所有一代推送
-        sql = "select agent_cd from tbl_mcht_agent where ext5='1' and EXT2='09970000' and  PUSH_ID='0'"
+        sql = "select agent_cd from tbl_mcht_agent where ext5='1' and EXT2='09970000'"
     elif batType == 'A0000002':
         #推送所有代理
-        sql = "select agent_cd from tbl_mcht_agent where EXT2='09970000' and  PUSH_ID='0'"
+        sql = "select agent_cd from tbl_mcht_agent where EXT2='09970000'"
     else:
         log.error("未知类型")
         return
@@ -91,12 +91,12 @@ def sendBatMsgByType(batType, msg):
             sendBatMsg(toAccts, msg)
             toAccts = []
             i = 0
-            time.sleep(0.5)
+            time.sleep(0.6)
 
     if i > 0:
         sendBatMsg(toAccts, msg)
     cursor.close()
-
+    db.close()
 
 def updMsgSta(db, msgId):
     sql = "update TBL_SND_NOTICE_LOG set sta ='1' where ind = %d" % msgId
@@ -140,7 +140,7 @@ def reConnectDb(dbuser, dbpwd, tnsname):
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['ONLDBUSER'], os.environ['ONLDBPWD'], os.environ['TNSNAME']),
                            encoding='gb18030')
-    pl = Pool(10)
+    pl = ThreadPool(10)
     #获取信息
     while 1:
         try:

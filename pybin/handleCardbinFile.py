@@ -22,7 +22,7 @@ def getFirstLine(str):
 
 def checkCardBinExist(db, bin_sta_no):
     cursor = db.cursor()
-    sql = "select count(*) from TBL_SHC_CARD_BIN_SWT where CARD_BIN_STA = '%s'" % bin_sta_no
+    sql = "select count(*) from TBL_BANK_BIN_INF_POSP where BIN_STA_NO = '%s'" % bin_sta_no
     cursor.execute(sql)
     x = cursor.fetchone()
     cursor.close()
@@ -100,7 +100,7 @@ def genSwtSql(insIdCd, cardDis, acct1_tnum, acc1_offset, acc1_len,
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),
                            encoding='gb18030')
-    fileName = "../rpt/2018年12月25日版卡表.xls"
+    fileName = "D:/2019年06月25日版卡表.xls"
     workbook = xlrd.open_workbook(fileName)
     sh = workbook.sheet_by_index(0)
     nrows = sh.nrows
@@ -133,7 +133,7 @@ def main():
         if res == True:
             continue
 
-        genSwtSql(insIdCd, cardDis, acct1_tnum, acc1_offset, acc1_len,
+        genPospSql(insIdCd, cardDis, acct1_tnum, acc1_offset, acc1_len,
                   bin_tnum, bin_offset, bin_len, bin_sta_no, bin_end_no, card_type)
 
 
