@@ -10,47 +10,48 @@ from utl.common import *
 
 class rptFile():
     def __init__(self, ins_id_cd=None, stlm_date=None):
-        self.iCurr = 1
         self.ins_id_cd = ins_id_cd
         self.stlm_date = stlm_date
         self.wb = None
         if self.ins_id_cd != None:
-            self.wb = Workbook()
-            self.ws = self.wb.active
+            self.wb = Workbook(write_only=True)
+            self.ws = self.wb.create_sheet()
             self.__fileHeader()
 
     def __fileHeader(self):
-        self.ws.cell(row=self.iCurr, column=1).value = '日期'
-        self.ws.cell(row=self.iCurr, column=2).value = '时间'
-        self.ws.cell(row=self.iCurr, column=3).value = '代付订单号'
-        self.ws.cell(row=self.iCurr, column=4).value = '商户订单号'
-        self.ws.cell(row=self.iCurr, column=5).value = '交易类型'
-        self.ws.cell(row=self.iCurr, column=6).value = '发起方式'
-        self.ws.cell(row=self.iCurr, column=7).value = '代付金额'
-        self.ws.cell(row=self.iCurr, column=8).value = '结算卡'
-        self.ws.cell(row=self.iCurr, column=9).value = '结算账户名'
-        self.ws.cell(row=self.iCurr, column=10).value = '联行号'
-        self.ws.cell(row=self.iCurr, column=11).value = '银行名称'
-        self.ws.cell(row=self.iCurr, column=12).value = '交易备注'
+        data = []
+        data.append('日期')
+        data.append('时间')
+        data.append('代付订单号')
+        data.append('商户订单号')
+        data.append('交易类型')
+        data.append('发起方式')
+        data.append('代付金额')
+        data.append('结算卡')
+        data.append('结算账户名')
+        data.append('联行号')
+        data.append('银行名称')
+        data.append('交易备注')
+        self.ws.append(data)
 
-        self.iCurr = self.iCurr + 1
 
     def tailData(self, instDate, instTime, payOrder, reqOrder, txnName, txnType,
                  payAmt, acctNo, acctNm, bankId, bankNm, payDesc):
-        self.ws.cell(row=self.iCurr, column=1).value = instDate
-        self.ws.cell(row=self.iCurr, column=2).value = instTime
-        self.ws.cell(row=self.iCurr, column=3).value = payOrder
-        self.ws.cell(row=self.iCurr, column=4).value = reqOrder
-        self.ws.cell(row=self.iCurr, column=5).value = txnName
-        self.ws.cell(row=self.iCurr, column=6).value = txnType
-        self.ws.cell(row=self.iCurr, column=7).value = payAmt
-        self.ws.cell(row=self.iCurr, column=8).value = acctNo
-        self.ws.cell(row=self.iCurr, column=9).value = acctNm
-        self.ws.cell(row=self.iCurr, column=10).value = bankId
-        self.ws.cell(row=self.iCurr, column=11).value = bankNm
-        self.ws.cell(row=self.iCurr, column=12).value = payDesc
+        data = []
+        data.append(instDate)
+        data.append(instTime)
+        data.append(payOrder)
+        data.append(reqOrder)
+        data.append(txnName)
+        data.append(txnType)
+        data.append(payAmt)
+        data.append(acctNo)
+        data.append(acctNm)
+        data.append(bankId)
+        data.append(bankNm)
+        data.append(payDesc)
+        self.ws.append(data)
 
-        self.iCurr = self.iCurr + 1
 
     def getInsId(self):
         return self.ins_id_cd

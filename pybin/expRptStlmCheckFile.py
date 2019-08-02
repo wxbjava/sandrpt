@@ -9,10 +9,26 @@ from openpyxl.workbook import Workbook
 import os
 from utl.common import *
 from utl.gldict import *
-
+from math import fabs
 
 #表格全局量
 i = 0
+
+#代付类型统计结构
+class payTxnCount():
+    def __init__(self):
+        self.count = 0
+        self.transAmt = 0
+        self.prodAmt = 0
+        self.costAmt = 0
+        self.rtnAmt = 0
+
+def getPayCountData(payTypeDList, key):
+    try:
+        result = payTypeDList[key]
+    except KeyError:
+        result = payTxnCount()
+    return result
 
 #通过键值查找一代的总分润
 def getAgentIncome(db, key_rsp):
@@ -196,58 +212,56 @@ def handleTxn02RptHead(ws):
     ws.cell(row=i, column=5).value = '品牌服务费'
     ws.cell(row=i, column=6).value = '代付成本'
     ws.cell(row=i, column=7).value = '资金清算净额'
+    ws.cell(row=i, column=8).value = '代付退单金额'
     i = i + 1
 
 
 def handleTxn02RptBody(db, ws, stlm_date):
-    count,allCount = 0, 0
-    transAmt, allTransAmt= 0.0, 0.0
-    prodAmt, allProdAmt = 0.0, 0.0
-    costAmt, allCostAmt = 0.0, 0.0
-    oldPayType = ''
-    payType = ''
     #查找对账成功的交易
     global i
-    sql = "select pay_type, REAL_TRANS_AMT, prod_fee, ISS_FEE " \
+    sql = "select pay_type, txn_num, count(*), sum(REAL_TRANS_AMT), sum(prod_fee), sum(ISS_FEE) " \
           " from TBL_STLM_TXN_BILL_DTL " \
-          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' and chnl_id ='A002' order by  pay_type" % (stlm_date)
+          "where host_date = '%s' and txn_num in ('1801','9164') and check_sta ='1' and chnl_id ='A002' group by  pay_type, txn_num" % (stlm_date)
     cursor = db.cursor()
     cursor.execute(sql)
+    payTypeList = {}
     for ltTxn in cursor:
-        if count == 0:
-            oldPayType = ltTxn[0]
-        payType = ltTxn[0]
-        if (oldPayType != payType):
-            #代付商户不同
-            tailTxn02RptBody(ws,i,stlm_date,oldPayType,count,transAmt,prodAmt,costAmt)
-            i = i + 1
-            #初始化
-            oldPayType = payType
-            count = 0
-            transAmt = 0.0
-            prodAmt = 0.0
-            costAmt = 0.0
+        data = getPayCountData(payTypeList, ltTxn[0])
+        if ltTxn[1] == '1801':
+            data.transAmt = ltTxn[3]
+            data.count = ltTxn[2]
+            data.prodAmt = ltTxn[4]
+            data.costAmt = ltTxn[5]
+        elif ltTxn[1] == '9164':
+            data.rtnAmt = ltTxn[3]
+        payTypeList[ltTxn[0]] = data
 
-        #查找代理商费用
-        count = count + 1
-        allCount = allCount + 1
-        transAmt = toNumberFmt(transAmt + ltTxn[1])
-        allTransAmt = toNumberFmt(allTransAmt + ltTxn[1])
-        prodAmt = toNumberFmt(prodAmt + ltTxn[2])
-        allProdAmt = toNumberFmt(allProdAmt + ltTxn[2])
-        costAmt = toNumberFmt(costAmt + ltTxn[3])
-        allCostAmt = toNumberFmt(allCostAmt + ltTxn[3])
-    if payType != '':
-        tailTxn02RptBody(ws, i, stlm_date, payType, count, transAmt, prodAmt, costAmt)
+    allCount = 0
+    allTransAmt = 0
+    allProdAmt = 0
+    allCostAmt = 0
+    allRtnAmt = 0
+
+    for payType in payTypeList:
+        allCount = allCount + payTypeList[payType].count
+        allTransAmt = allTransAmt + payTypeList[payType].transAmt
+        allProdAmt = allProdAmt + payTypeList[payType].prodAmt
+        allCostAmt = allCostAmt + payTypeList[payType].costAmt
+        allRtnAmt = allRtnAmt + payTypeList[payType].rtnAmt
+        tailTxn02RptBody(ws, i, stlm_date, payType, payTypeList[payType].count,
+                         payTypeList[payType].transAmt, payTypeList[payType].prodAmt,
+                         payTypeList[payType].costAmt, payTypeList[payType].rtnAmt)
         i = i + 1
-    tailTxn02RptTail(ws, i, allCount, allTransAmt, allProdAmt, allCostAmt)
+
+
+    tailTxn02RptTail(ws, i, allCount, allTransAmt, allProdAmt, allCostAmt, allRtnAmt)
     i = i + 1
 
     cursor.close()
 
 
 
-def tailTxn02RptBody(ws,i,stlmDate,payType,count,transAmt,prodAmt,costAmt):
+def tailTxn02RptBody(ws,i,stlmDate,payType,count,transAmt,prodAmt,costAmt,rtnAmt):
     ws.cell(row=i, column=1).value = stlmDate
     if payType == '00':
         ws.cell(row=i, column=2).value = 'S0出款'
@@ -258,23 +272,23 @@ def tailTxn02RptBody(ws,i,stlmDate,payType,count,transAmt,prodAmt,costAmt):
     else:
         ws.cell(row=i, column=2).value = '其他'
     ws.cell(row=i, column=3).value = count
-    ws.cell(row=i, column=4).value = toNumberFmt(transAmt * (-1))
-    ws.cell(row=i, column=5).value = prodAmt
-    ws.cell(row=i, column=6).value = costAmt
-    ws.cell(row=i, column=7).value = prodAmt
-    ws.cell(row=i, column=7).value = toNumberFmt((transAmt - prodAmt - costAmt) * (-1))
+    ws.cell(row=i, column=4).value = toNumberFmt(fabs(transAmt))
+    ws.cell(row=i, column=5).value = toNumberFmt(prodAmt)
+    ws.cell(row=i, column=6).value = toNumberFmt(costAmt)
+    ws.cell(row=i, column=7).value = toNumberFmt(fabs(transAmt - prodAmt - costAmt))
+    ws.cell(row=i, column=8).value = toNumberFmt(fabs(rtnAmt))
 
-def tailTxn02RptTail(ws,i,count,transAmt,prodAmt,costAmt):
+def tailTxn02RptTail(ws,i,count,transAmt,prodAmt,costAmt, rtnAmt):
     ws.cell(row=i, column=2).value = '总计'
     ws.cell(row=i, column=3).value = count
-    ws.cell(row=i, column=4).value = toNumberFmt(transAmt * (-1))
-    ws.cell(row=i, column=5).value = prodAmt
-    ws.cell(row=i, column=6).value = costAmt
-    ws.cell(row=i, column=7).value = prodAmt
-    ws.cell(row=i, column=7).value = toNumberFmt((transAmt - prodAmt - costAmt) * (-1))
+    ws.cell(row=i, column=4).value = toNumberFmt(fabs(transAmt))
+    ws.cell(row=i, column=5).value = toNumberFmt(prodAmt)
+    ws.cell(row=i, column=6).value = toNumberFmt(costAmt)
+    ws.cell(row=i, column=7).value = toNumberFmt(fabs(transAmt - prodAmt - costAmt))
+    ws.cell(row=i, column=8).value = toNumberFmt(fabs(rtnAmt))
 
 #出款
-def tailTxn03RptBody(ws,i,stlm_date,chnlId, type,count,transAmt):
+def tailTxn03RptBody(ws,i,stlm_date,chnlId, type,count,transAmt, rtnAmt):
     typeName = ''
     ws.cell(row=i, column=1).value = stlm_date
     ws.cell(row=i, column=2).value = "%s-%s" % (chnlId, getChnlName(chnlId))
@@ -288,22 +302,37 @@ def tailTxn03RptBody(ws,i,stlm_date,chnlId, type,count,transAmt):
         typeName = "其他"
     ws.cell(row=i, column=3).value = typeName
     ws.cell(row=i, column=4).value = count
-    ws.cell(row=i, column=5).value = toNumberFmt(transAmt * (-1))
+    ws.cell(row=i, column=5).value = toNumberFmt(fabs(transAmt))
     if type == "03" :
         ws.cell(row=i, column=6).value = '代理商分润'
     else:
         ws.cell(row=i, column=6).value = '商户清算款'
+    ws.cell(row=i, column=7).value = toNumberFmt(fabs(rtnAmt))
 
 def handleTxn03RptBody(db, ws, stlm_date):
     # 按照通道查找对账成功的代付
     global i
-    sql = "select DEST_CHNL_ID, pay_type, count(*), sum(REAL_TRANS_AMT) " \
+    sql = "select trim(DEST_CHNL_ID), pay_type, txn_num, count(*), sum(REAL_TRANS_AMT) " \
           " from TBL_STLM_TXN_BILL_DTL " \
-          "where host_date = '%s' and txn_num ='1801' and check_sta ='1' and chnl_id ='A002' group by DEST_CHNL_ID, pay_type" % (stlm_date)
+          "where host_date = '%s' and txn_num in ('1801','9164') and check_sta ='1' and " \
+          "chnl_id ='A002' group by trim(DEST_CHNL_ID), pay_type, txn_num" % (stlm_date)
     cursor = db.cursor()
     cursor.execute(sql)
+    payChnlList = {}
     for ltTxn in cursor:
-        tailTxn03RptBody(ws, i, stlm_date, ltTxn[0], ltTxn[1], ltTxn[2], toNumberFmt(ltTxn[3]))
+        key = "%s_%s" % (ltTxn[0],ltTxn[1])
+        data = getPayCountData(payChnlList, key)
+        if ltTxn[2] == '1801':
+            data.transAmt = ltTxn[4]
+            data.count = ltTxn[3]
+        elif ltTxn[2] == '9164':
+            data.rtnAmt = ltTxn[4]
+        payChnlList[key] = data
+
+
+    for key in payChnlList:
+        keyData = key.split("_")
+        tailTxn03RptBody(ws, i, stlm_date, keyData[0], keyData[1], payChnlList[key].count, payChnlList[key].transAmt, payChnlList[key].rtnAmt)
         i = i + 1
 
     cursor.close()
@@ -320,6 +349,7 @@ def handleTxn03Rpt(db, ws, stlm_date):
     ws.cell(row=i, column=4).value = '出款笔数'
     ws.cell(row=i, column=5).value = '出款金额'
     ws.cell(row=i, column=6).value = '出款类型'
+    ws.cell(row=i, column=7).value = '退单金额'
     i = i + 1
 
     handleTxn03RptBody(db, ws, stlm_date)

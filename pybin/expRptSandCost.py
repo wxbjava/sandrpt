@@ -49,51 +49,54 @@ def getCardType(cardType):
 
 
 def newSandCostFileHead(ws):
-    i = 1
-    ws.cell(row=i, column=1).value = '交易日期'
-    ws.cell(row=i, column=2).value = '商户号'
-    ws.cell(row=i, column=3).value = '商户名'
-    ws.cell(row=i, column=4).value = '结算编号'
-    ws.cell(row=i, column=5).value = '项目标识'
-    ws.cell(row=i, column=6).value = '商户类型'
-    ws.cell(row=i, column=7).value = '借/贷'
-    ws.cell(row=i, column=8).value = '交易笔数'
-    ws.cell(row=i, column=9).value = '交易金额'
-    ws.cell(row=i, column=10).value = '商户手续费'
-    ws.cell(row=i, column=11).value = '发卡行服务费'
-    ws.cell(row=i, column=12).value = '银联网络转接费'
-    ws.cell(row=i, column=13).value = '品牌服务费'
-    ws.cell(row=i, column=14).value = '总成本'
-    ws.cell(row=i, column=15).value = '差错处理费用'
-    ws.cell(row=i, column=16).value = '入账金额'
-    ws.cell(row=i, column=17).value = '商户清算资金'
-    ws.cell(row=i, column=18).value = '收单收入'
-    ws.cell(row=i, column=19).value = '总部收入'
-    ws.cell(row=i, column=20).value = '分公司收入'
-    ws.cell(row=i, column=21).value = '代理收入'
+    data = []
+    data.append('交易日期')
+    data.append('商户号')
+    data.append('商户名')
+    data.append('结算编号')
+    data.append('项目标识')
+    data.append('商户类型')
+    data.append('借/贷')
+    data.append('交易笔数')
+    data.append('交易金额')
+    data.append('商户手续费')
+    data.append('发卡行服务费')
+    data.append('银联网络转接费')
+    data.append('品牌服务费')
+    data.append('总成本')
+    data.append('差错处理费用')
+    data.append('入账金额')
+    data.append('商户清算资金')
+    data.append('收单收入')
+    data.append('总部收入')
+    data.append('分公司收入')
+    data.append('代理收入')
+    ws.append(data)
 
-def tailSandCostBody(ws,i,ltData, db):
-    ws.cell(row=i, column=1).value = ltData[1]
-    ws.cell(row=i, column=2).value = ltData[2]
-    ws.cell(row=i, column=3).value = getMchtName(ltData[2], db)
-    ws.cell(row=i, column=4).value = getStlmMd(ltData[3])
-    ws.cell(row=i, column=5).value = getItemName(ltData[4])
-    ws.cell(row=i, column=6).value = getMchtType(ltData[5])
-    ws.cell(row=i, column=7).value = getCardType(ltData[6])
-    ws.cell(row=i, column=8).value = ltData[7]
-    ws.cell(row=i, column=9).value = toNumberFmt(ltData[8])
-    ws.cell(row=i, column=10).value = toNumberFmt(ltData[9])
-    ws.cell(row=i, column=11).value = toNumberFmt(ltData[10])
-    ws.cell(row=i, column=12).value = toNumberFmt(ltData[11])
-    ws.cell(row=i, column=13).value = toNumberFmt(ltData[12])
-    ws.cell(row=i, column=14).value = toNumberFmt(ltData[13])
-    ws.cell(row=i, column=15).value = toNumberFmt(ltData[14])
-    ws.cell(row=i, column=16).value = toNumberFmt(ltData[15])
-    ws.cell(row=i, column=17).value = toNumberFmt(ltData[16])
-    ws.cell(row=i, column=18).value = toNumberFmt(ltData[17])
-    ws.cell(row=i, column=19).value = toNumberFmt(ltData[18])
-    ws.cell(row=i, column=20).value = toNumberFmt(ltData[19])
-    ws.cell(row=i, column=21).value = toNumberFmt(ltData[20])
+def tailSandCostBody(ws, ltData, db):
+    data= []
+    data.append(ltData[1])
+    data.append(ltData[2])
+    data.append(getMchtName(ltData[2], db))
+    data.append(getStlmMd(ltData[3]))
+    data.append(getItemName(ltData[4]))
+    data.append(getMchtType(ltData[5]))
+    data.append(getCardType(ltData[6]))
+    data.append(ltData[7])
+    data.append(toNumberFmt(ltData[8]))
+    data.append(toNumberFmt(ltData[9]))
+    data.append(toNumberFmt(ltData[10]))
+    data.append(toNumberFmt(ltData[11]))
+    data.append(toNumberFmt(ltData[12]))
+    data.append(toNumberFmt(ltData[13]))
+    data.append(toNumberFmt(ltData[14]))
+    data.append(toNumberFmt(ltData[15]))
+    data.append(toNumberFmt(ltData[16]))
+    data.append(toNumberFmt(ltData[17]))
+    data.append(toNumberFmt(ltData[18]))
+    data.append(toNumberFmt(ltData[19]))
+    data.append(toNumberFmt(ltData[20]))
+    ws.append(data)
 
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),encoding='gb18030')
@@ -127,10 +130,9 @@ def main():
         if insIdCdTmp == '':
             insIdCdTmp = ltData[0]
             filename = filePath + 'Sand_Cost_%s_%s.xlsx' % (ltData[0], stlm_date)
-            wb = Workbook()
-            ws = wb.active
+            wb = Workbook(write_only=True)
+            ws = wb.create_sheet()
             newSandCostFileHead(ws)
-            i = 2
         if insIdCdTmp != ltData[0]:
             #关闭前一代理商文件
             wb.save(filename)
@@ -141,10 +143,8 @@ def main():
             wb = Workbook()
             ws = wb.active
             newSandCostFileHead(ws)
-            i = 2
         #写入文件
-        tailSandCostBody(ws,i,ltData, db)
-        i = i + 1
+        tailSandCostBody(ws,ltData, db)
     if insIdCdTmp != '':
         wb.save(filename)
         wb.close()
