@@ -26,6 +26,12 @@ def insertData(db, host_date, company_cd, mcht_cd, term_id, term_service_flg,
     else:
         sn =''
 
+    sql = "select count(*) from tbl_sn_first_txn_log where sn = '%s'" % (sn)
+    cursor.execute(sql)
+    x = cursor.fetchone()
+    if x[0] > 0:
+        return
+
     sql = "insert into tbl_sn_first_txn_log (HOST_DATE,INST_DATE,INST_TIME,SN,COMPANY_CD,MCHT_CD," \
           "TERM_ID,TERM_SERVICE_FLG,TRANS_AMT,TRANS_FEE,ADD_FEE,KEY_RSP,TERM_SSN,RETRIVL_REF) values (" \
           ":1, :2, :3, :4, :5, :6, :7, :8, :9, :10, :11, :12, :13, :14)"
