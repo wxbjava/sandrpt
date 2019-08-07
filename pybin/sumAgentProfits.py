@@ -152,10 +152,10 @@ def calcLowAgentChargeProfits(db, stlmDate):
         allAgent = updAllAgent(db, lastKeyRsp, allAgent, txnAgent)
 
     #更新数据库
-    sql = "update tbl_agent_share_sum set ALL_DAILY_PROFITS = :1 where agent_cd = :2"
+    sql = "update tbl_agent_share_sum set ALL_DAILY_PROFITS = :1 where agent_cd = :2 and host_date = :3"
     cursor.prepare(sql)
     for agent_cd in allAgent:
-        param = (toNumberFmt(allAgent[agent_cd]), agent_cd)
+        param = (toNumberFmt(allAgent[agent_cd]), agent_cd, stlmDate)
         cursor.execute(None, param)
 
     cursor.close()
