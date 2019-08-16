@@ -260,7 +260,7 @@ def main():
 
             sql = "select TXN_POS_DATE, TXN_POS_TIME, mcht_cd, pan, REAL_TRANS_AMT, iss_fee, swt_fee, prod_fee, err_fee from " \
                   " tbl_stlm_txn_bill_dtl where " \
-                  "stlm_date = '%s' and txn_num in ('9009','9005')" \
+                  "stlm_date = '%s' and txn_num like '9%%'" \
                   % (stlm_date)
             cursor = db.cursor()
             cursor.execute(sql)

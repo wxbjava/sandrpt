@@ -216,7 +216,7 @@ class AgentBalance:
 
         #计算交易日对应收入
         sql = "select sum(ALL_PROFITS) from tbl_ins_profits_txn_sum where " \
-              "host_date = '%s' and INS_ID_CD ='%s'" % (self.stlmDate, self.insIdCd)
+              "host_date <= '%s' and INS_ID_CD ='%s' and CHARGE_STA != '2'" % (self.stlmDate, self.insIdCd)
         cursor = self.dbbat.cursor()
         cursor.execute(sql)
         x = cursor.fetchone()
