@@ -45,7 +45,7 @@ def main():
 
     msg = "昨日交易总额:%.2f元,差错或长款交易:%.2f元,在用优惠商户个数:%d个" % (transAmt, unknownAmt, mchtCount)
     sms1 = sndsms()
-    sms1.setPhone(['13917667716','17621110116'])
+    sms1.setPhone(['',''])
     sms1.setMsg(msg)
     sms1.sndSms()
 
