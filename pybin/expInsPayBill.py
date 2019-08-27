@@ -32,11 +32,12 @@ class rptFile():
         data.append('联行号')
         data.append('银行名称')
         data.append('交易备注')
+        data.append('交易流水号')
         self.ws.append(data)
 
 
     def tailData(self, instDate, instTime, payOrder, reqOrder, txnName, txnType,
-                 payAmt, acctNo, acctNm, bankId, bankNm, payDesc):
+                 payAmt, acctNo, acctNm, bankId, bankNm, payDesc, termSsn):
         data = []
         data.append(instDate)
         data.append(instTime)
@@ -50,6 +51,7 @@ class rptFile():
         data.append(bankId)
         data.append(bankNm)
         data.append(payDesc)
+        data.append(termSsn)
         self.ws.append(data)
 
 
@@ -97,7 +99,7 @@ def main():
     #查找指定日期机构分润代付情况
     sql = "select a.key_rsp, a.TXN_NUM, a.TXN_DATE, a.TXN_TIME, trim(a.INS_ID_CD), trim(substrb(b.ADDTNL_DATA, 3, 28))," \
           "trim(substrb(b.ADDTNL_DATA, 31, 60)), trim(substrb(b.ADDTNL_DATA, 91, 12)), trim(substrb(b.ADDTNL_DATA, 103, 60)), " \
-          "b.trans_amt / 100, b.next_txn_key, trim(b.MSQ_TYPE)" \
+          "b.trans_amt / 100, b.next_txn_key, trim(b.MSQ_TYPE), b.term_ssn " \
           "from TBL_STLM_TXN_BILL_DTL a left join tbl_acq_txn_log b on a.key_rsp = b.key_rsp " \
           "where a.host_date ='%s' and a.PAY_TYPE ='03' order by a.ins_id_cd, a.txn_date, a.txn_time " % stlm_date
     cursor = db.cursor()
@@ -129,7 +131,9 @@ def main():
         acctNm = ltData[6]
         bankId = ltData[7]
         bankNm = ltData[8]
-        rptfile.tailData(instDate, instTime, payOrder, reqOrder, txnName, txnType,payAmt, acctNo, acctNm, bankId, bankNm, payDesc)
+        termSsn = ltData[12]
+        rptfile.tailData(instDate, instTime, payOrder, reqOrder, txnName,
+                         txnType,payAmt, acctNo, acctNm, bankId, bankNm, payDesc, termSsn)
 
     rptfile.saveFile()
 
