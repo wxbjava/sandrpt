@@ -140,8 +140,8 @@ def main():
             #新代理商设置文件
             insIdCdTmp = ltData[0]
             filename = filePath + 'Sand_Cost_%s_%s.xlsx' % (ltData[0], stlm_date)
-            wb = Workbook()
-            ws = wb.active
+            wb = Workbook(write_only=True)
+            ws = wb.create_sheet()
             newSandCostFileHead(ws)
         #写入文件
         tailSandCostBody(ws,ltData, db)
