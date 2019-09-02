@@ -5,8 +5,7 @@
 import cx_Oracle
 import sys
 import os
-from math import fabs
-from openpyxl.workbook import Workbook
+import xlsxwriter
 from utl.common import *
 from utl.gldict import *
 
@@ -48,7 +47,7 @@ def getCardType(cardType):
         return "未知"
 
 
-def newSandCostFileHead(ws):
+def newSandCostFileHead(ws, i):
     data = []
     data.append('交易日期')
     data.append('商户号')
@@ -71,9 +70,9 @@ def newSandCostFileHead(ws):
     data.append('总部收入')
     data.append('分公司收入')
     data.append('代理收入')
-    ws.append(data)
+    ws.write_row(i, 0, data)
 
-def tailSandCostBody(ws, ltData, db):
+def tailSandCostBody(ws, ltData, db, i):
     data= []
     data.append(ltData[1])
     data.append(ltData[2])
@@ -96,7 +95,7 @@ def tailSandCostBody(ws, ltData, db):
     data.append(toNumberFmt(ltData[18]))
     data.append(toNumberFmt(ltData[19]))
     data.append(toNumberFmt(ltData[20]))
-    ws.append(data)
+    ws.write_row(i, 0, data)
 
 def main():
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['DBUSER'], os.environ['DBPWD'], os.environ['TNSNAME']),encoding='gb18030')
@@ -126,27 +125,30 @@ def main():
     cursor = db.cursor()
     cursor.execute(sql)
     insIdCdTmp = ''
+    i = 0
     for ltData in cursor:
         if insIdCdTmp == '':
             insIdCdTmp = ltData[0]
             filename = filePath + 'Sand_Cost_%s_%s.xlsx' % (ltData[0], stlm_date)
-            wb = Workbook(write_only=True)
-            ws = wb.create_sheet()
-            newSandCostFileHead(ws)
+            wb = xlsxwriter.Workbook(filename, {'constant_memory': True})
+            ws = wb.add_worksheet('机构成本')
+            newSandCostFileHead(ws, i)
+            i = i + 1
         if insIdCdTmp != ltData[0]:
             #关闭前一代理商文件
-            wb.save(filename)
             wb.close()
+            i = 0
             #新代理商设置文件
             insIdCdTmp = ltData[0]
             filename = filePath + 'Sand_Cost_%s_%s.xlsx' % (ltData[0], stlm_date)
-            wb = Workbook(write_only=True)
-            ws = wb.create_sheet()
-            newSandCostFileHead(ws)
+            wb = xlsxwriter.Workbook(filename, {'constant_memory': True})
+            ws = wb.add_worksheet('机构成本')
+            newSandCostFileHead(ws, i)
+            i = i + 1
         #写入文件
-        tailSandCostBody(ws,ltData, db)
+        tailSandCostBody(ws,ltData, db, i)
+        i = i + 1
     if insIdCdTmp != '':
-        wb.save(filename)
         wb.close()
     cursor.close()
     print('hostDate %s expRptSandCost end' % stlm_date)

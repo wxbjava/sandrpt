@@ -5,17 +5,19 @@
 import os
 import sys
 import cx_Oracle
-from openpyxl.workbook import Workbook
-from utl.common import *
+import xlsxwriter
+
 
 class rptFile():
     def __init__(self, ins_id_cd=None, stlm_date=None):
         self.ins_id_cd = ins_id_cd
         self.stlm_date = stlm_date
+        self.curr_row = 0
         self.wb = None
         if self.ins_id_cd != None:
-            self.wb = Workbook(write_only=True)
-            self.ws = self.wb.create_sheet()
+            filePath = '%s/%s/' % (os.environ['RPT7HOME'], self.stlm_date)
+            self.wb = xlsxwriter.Workbook('%s/InsPayBill_%s_%s.xlsx' % (filePath, self.ins_id_cd, self.stlm_date), {'constant_memory': True})
+            self.ws = self.wb.add_worksheet('机构分润划款明细')
             self.__fileHeader()
 
     def __fileHeader(self):
@@ -33,7 +35,8 @@ class rptFile():
         data.append('银行名称')
         data.append('交易备注')
         data.append('交易流水号')
-        self.ws.append(data)
+        self.ws.write_row(self.curr_row, 0, data)
+        self.curr_row = self.curr_row + 1
 
 
     def tailData(self, instDate, instTime, payOrder, reqOrder, txnName, txnType,
@@ -52,7 +55,8 @@ class rptFile():
         data.append(bankNm)
         data.append(payDesc)
         data.append(termSsn)
-        self.ws.append(data)
+        self.ws.write_row(self.curr_row, 0, data)
+        self.curr_row = self.curr_row + 1
 
 
     def getInsId(self):
@@ -60,8 +64,6 @@ class rptFile():
 
     def saveFile(self):
         if self.wb != None:
-            filePath = '%s/%s/' % (os.environ['RPT7HOME'], self.stlm_date)
-            self.wb.save('%s/InsPayBill_%s_%s.xlsx'% (filePath, self.ins_id_cd, self.stlm_date))
             self.wb.close()
 
 def getDesc(db, keyRsp):
