@@ -16,7 +16,7 @@ import logging as log
 log.basicConfig(level=log.INFO,
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                handlers={log.FileHandler(filename=os.environ['HOME'] + '/log/sendNotice.log', mode='a', encoding='gb18030')})
+                handlers={log.FileHandler(filename=os.environ['HOME'] + '/log/sendNoticeAgent.log', mode='a', encoding='gb18030')})
 
 appSecret = os.environ['APPSECRET']
 appKey = os.environ['APPKEY']
