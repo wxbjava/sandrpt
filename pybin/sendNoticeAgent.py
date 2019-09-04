@@ -1,6 +1,6 @@
 #!/home/acqbat/python36/bin/python3
 #-*- coding:gb18030 -*-
-#推送信息
+#代理商推送信息
 
 import cx_Oracle
 from multiprocessing.pool import ThreadPool
