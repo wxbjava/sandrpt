@@ -30,7 +30,9 @@ class sndsms:
         return data.decode('gb18030')
 
     def sndSms(self):
+        result = []
         for phone in self.__phlst:
-            self.__send(phone)
+            result.append(self.__send(phone))
+        return result
 
 
