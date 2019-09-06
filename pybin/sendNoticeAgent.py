@@ -5,13 +5,11 @@
 import cx_Oracle
 from multiprocessing.pool import ThreadPool
 import os
-from hashlib import sha1
 import time
-import random
-import string
-import requests
+from utl.neteim import NeteIm
 from utl.common import *
 import logging as log
+import utl.proxycfg as proxycfg
 
 log.basicConfig(level=log.INFO,
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -20,51 +18,20 @@ log.basicConfig(level=log.INFO,
 
 appSecret = os.environ['APPSECRET']
 appKey = os.environ['APPKEY']
-proxy = {
-    'http':'172.17.2.19:3128',
-    'https':'172.17.2.19:3128'
-}
-proxy = {}  #开发环境不配置代理
+proxy = proxycfg.get_proxy()
 
-def getCheckSum(appSecret, nonce, curTime):
-    signdata = appSecret + nonce + curTime
-    s1 = sha1()
-    s1.update(signdata.encode("utf-8"))
-    return s1.hexdigest()
-
-
-def get_header():
-    curTime = getCurrUtcStr()
-    nonce = ''.join(random.sample(string.ascii_letters + string.digits, 20))
-    checksum = getCheckSum(appSecret, nonce, curTime)
-    Content_Type = "application/x-www-form-urlencoded;charset=utf-8"
-    header = {'Content-Type': Content_Type, 'AppKey': appKey, 'Nonce': str(nonce), 'CurTime': curTime,'CheckSum': checksum}
-    return header
-
-def get_body(toUser, msg):
-    data = 'from=10000&ope=0&to=%s&type=0&body={"msg":"%s"}' % (toUser, msg)
-    log.info(data)
-    return data.encode('utf-8')
-
-def get_batch_body(toAccts, msg):
-    toAcctList = ('%s' % toAccts).replace('\'', '"')
-    data = 'fromAccid=10000&toAccids=%s&type=0&body={"msg":"%s"}' % (toAcctList, msg)
-    log.info(data)
-    return data.encode('utf-8')
 
 def sendMsg(toUser, msg):
-    url = 'https://api.netease.im/nimserver/msg/sendMsg.action'
-    postdata = get_body(toUser, msg)
-    head = get_header()
-    response = requests.post(url, data=postdata, headers=head, proxies=proxy)
-    log.info(response.json())
+    nete_im = NeteIm(appSecret, appKey, '10000', proxy)
+    res = nete_im.send_msg(toUser, msg)
+    for msg in res:
+        log.info(msg)
 
 def sendBatMsg(toUser, msg):
-    url = 'https://api.netease.im/nimserver/msg/sendBatchMsg.action'
-    postdata = get_batch_body(toUser, msg)
-    head = get_header()
-    response = requests.post(url, data=postdata, headers=head, proxies=proxy)
-    log.info(response.json())
+    nete_im = NeteIm(appSecret, appKey, '10000', proxy)
+    res = nete_im.send_bat_msg(toUser, msg)
+    for msg in res:
+        log.info(msg)
 
 def sendBatMsgByType(batType, msg):
     db = cx_Oracle.connect('%s/%s@%s' % (os.environ['ONLDBUSER'], os.environ['ONLDBPWD'], os.environ['TNSNAME']),
@@ -119,7 +86,6 @@ def notice_agent(db, pl):
         if ltData[2] == '03':
             #类型批量发送
             pl.apply_async(sendBatMsgByType, args=(ltData[1], ltData[3],))
-
         else:
             pl.apply_async(sendMsg, args=(ltData[1], ltData[3],))
     cursor.close()
