@@ -27,7 +27,7 @@ class sndsms:
         client.send(sendByte)
         data = client.recv(9999)
         client.close()
-        return data.decode('utf-8')
+        return data
 
     def sndSms(self):
         result = []
